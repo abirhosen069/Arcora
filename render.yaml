@@ -1,0 +1,54 @@
+# ArcOra production stack — deploy with: render blueprint apply
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: arcora-api
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./arcora/backend/Dockerfile
+    dockerContext: ./arcora/backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: arcora-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ARC_NETWORK_NAME
+        value: Arc Testnet
+      - key: ARC_CHAIN_ID
+        value: "5042002"
+      - key: ARC_RPC_URL
+        value: https://rpc.testnet.arc.network
+      - key: ARC_EXPLORER_URL
+        value: https://testnet.arcscan.app
+      - key: ARC_USDC_ADDRESS
+        value: "0x3600000000000000000000000000000000000000"
+      - key: ARC_FAUCET_URL
+        value: https://faucet.circle.com
+      - key: TRANSACTION_EXECUTION_MODE
+        value: server_relay
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: RELAYER_PRIVATE_KEY
+        sync: false
+      - key: CIRCLE_KIT_KEY
+        sync: false
+      - key: CIRCLE_PROJECT_ID
+        sync: false
+      - key: CIRCLE_WALLET_SET_ID
+        sync: false
+
+databases:
+  - name: arcora-db
+    plan: basic-256mb
+    region: oregon
+    databaseName: arcora
+    user: arcora

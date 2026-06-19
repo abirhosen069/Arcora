@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REJECTED
+}
+
+enum TransactionType {
+  PAYMENT
+  REQUEST
+  BRIDGE
+  SWAP
+  SUBSCRIPTION
+  REFUND
+}
+
+model User {
+  id                  String              @id @default(uuid())
+  email               String              @unique
+  username            String              @unique
+  displayName         String
+  smartAccountAddress String              @unique
+  profileImageUrl     String?
+  reputationScore     Int                 @default(50)
+  isVerified          Boolean             @default(false)
+  status              UserStatus          @default(ACTIVE)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  sentTransactions    Transaction[]       @relation("SentTransactions")
+  receivedTransactions Transaction[]      @relation("ReceivedTransactions")
+  paymentRequestsFrom PaymentRequest[]    @relation("PaymentRequestsFrom")
+  paymentRequestsTo   PaymentRequest[]    @relation("PaymentRequestsTo")
+  agentWallets        AgentWallet[]
+}
+
+model Transaction {
+  id             String            @id @default(uuid())
+  blockchainHash String?
+  senderId       String?
+  receiverId     String?
+  amount         Decimal           @db.Decimal(36, 18)
+  token          String            @default("USDC")
+  sourceChain    String?
+  destinationChain String?
+  type           TransactionType
+  status         TransactionStatus @default(PENDING)
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  sender         User?             @relation("SentTransactions", fields: [senderId], references: [id])
+  receiver       User?             @relation("ReceivedTransactions", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([blockchainHash])
+}
+
+model PaymentRequest {
+  id          String            @id @default(uuid())
+  fromUserId  String
+  toUserId    String
+  amount      Decimal           @db.Decimal(36, 18)
+  token       String            @default("USDC")
+  note        String?
+  status      TransactionStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  fromUser    User              @relation("PaymentRequestsFrom", fields: [fromUserId], references: [id])
+  toUser      User              @relation("PaymentRequestsTo", fields: [toUserId], references: [id])
+}
+
+model AgentWallet {
+  id             String   @id @default(uuid())
+  ownerId        String
+  name           String
+  description    String?
+  walletAddress  String   @unique
+  monthlyBudget  Decimal  @db.Decimal(36, 18)
+  permissions    Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  owner          User     @relation(fields: [ownerId], references: [id])
+}
+
+model MerchantAccount {
+  id             String   @id @default(uuid())
+  ownerId        String
+  businessName   String
+  merchantHandle String   @unique
+  settlementAddress String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Subscription {
+  id          String            @id @default(uuid())
+  userId      String
+  merchantId  String?
+  agentWalletId String?
+  amount      Decimal           @db.Decimal(36, 18)
+  token       String            @default("USDC")
+  interval    String
+  status      TransactionStatus @default(PENDING)
+  nextChargeAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}

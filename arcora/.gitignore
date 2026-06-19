@@ -1,0 +1,19 @@
+.gradle/
+build/
+app/build/
+local.properties
+
+# Backend
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
