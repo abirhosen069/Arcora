@@ -51,10 +51,9 @@ class OnboardingViewModel @Inject constructor(
 
     fun onGoogleSignInResult(idToken: String, displayName: String) {
         val username = displayName.lowercase().filter { it.isLetterOrDigit() || it == '_' }.take(20).ifBlank { "arcora" }
-        val smartAddress = deterministicAddress(idToken)
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            runCatching { authRepository.continueWithGoogle(idToken, displayName, username, smartAddress) }
+            runCatching { authRepository.continueWithGoogle(idToken, displayName, username) }
                 .onSuccess { _uiState.update { it.copy(isLoading = false, walletReady = true) } }
                 .onFailure { throwable -> _uiState.update { it.copy(isLoading = false, error = throwable.message ?: "Google sign-in failed") } }
         }

@@ -12,8 +12,9 @@ export class SignupDto {
   @Matches(/^@?[a-zA-Z0-9_]{3,20}$/)
   username!: string;
 
+  @IsOptional()
   @IsEthereumAddress()
-  smartAccountAddress!: string;
+  smartAccountAddress?: string;
 }
 
 export class GoogleAuthDto {
@@ -28,8 +29,9 @@ export class GoogleAuthDto {
   @Matches(/^@?[a-zA-Z0-9_]{3,20}$/)
   username!: string;
 
+  @IsOptional()
   @IsEthereumAddress()
-  smartAccountAddress!: string;
+  smartAccountAddress?: string;
 }
 
 export class PasskeyRegistrationStartDto {

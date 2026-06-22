@@ -116,7 +116,7 @@ data class SignupRequest(
     val email: String,
     val displayName: String,
     val username: String,
-    val smartAccountAddress: String
+    val smartAccountAddress: String? = null
 )
 
 data class AuthSessionResponse(
@@ -349,7 +349,7 @@ data class GoogleAuthRequest(
     val idToken: String,
     val displayName: String,
     val username: String,
-    val smartAccountAddress: String
+    val smartAccountAddress: String? = null
 )
 
 data class PasskeyStartRequest(

@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { PrismaService } from '../common/prisma.service';
 import { SignupDto, GoogleAuthDto, PasskeyRegistrationFinishDto, PasskeyAuthenticationFinishDto } from './dto';
 
@@ -13,10 +13,18 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  private generateSmartAccountAddress(seed: string): string {
+    const secret = this.config.get<string>('JWT_SECRET') ?? 'development_only_arcora_secret';
+    const hash = createHmac('sha256', secret).update(seed).digest('hex');
+    return `0x${hash.padEnd(40, '0').slice(0, 40)}`;
+  }
+
   async signup(dto: SignupDto) {
     const email = dto.email.toLowerCase();
     const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
-    const smartAccountAddress = dto.smartAccountAddress.toLowerCase();
+    const smartAccountAddress = dto.smartAccountAddress
+      ? dto.smartAccountAddress.toLowerCase()
+      : this.generateSmartAccountAddress(email);
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -71,7 +79,9 @@ export class AuthService {
 
     const normalizedEmail = email.toLowerCase();
     const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
-    const smartAccountAddress = dto.smartAccountAddress.toLowerCase();
+    const smartAccountAddress = dto.smartAccountAddress
+      ? dto.smartAccountAddress.toLowerCase()
+      : this.generateSmartAccountAddress(normalizedEmail);
 
     const existingUser = await this.prisma.user.findFirst({
       where: {

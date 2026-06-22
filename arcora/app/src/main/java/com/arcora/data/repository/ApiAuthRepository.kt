@@ -30,14 +30,12 @@ class ApiAuthRepository @Inject constructor(
             .filter { it.isLetterOrDigit() || it == '_' }
             .take(20)
             .ifBlank { "arcora" }
-        val smartAccountAddress = deterministicDemoAddress(normalizedEmail)
 
         val response = api.signup(
             SignupRequest(
                 email = normalizedEmail,
                 displayName = safeName,
-                username = username,
-                smartAccountAddress = smartAccountAddress
+                username = username
             )
         )
 
@@ -52,13 +50,13 @@ class ApiAuthRepository @Inject constructor(
         response.user.toDomain().also { userState.value = it }
     }
 
-    override suspend fun continueWithGoogle(idToken: String, displayName: String, username: String, smartAccountAddress: String): UserProfile = mapApiErrors {
+    override suspend fun continueWithGoogle(idToken: String, displayName: String, username: String): UserProfile = mapApiErrors {
         val response = api.googleAuth(
             GoogleAuthRequest(
                 idToken = idToken,
                 displayName = displayName,
                 username = username,
-                smartAccountAddress = smartAccountAddress
+                smartAccountAddress = ""
             )
         )
 
@@ -96,11 +94,4 @@ class ApiAuthRepository @Inject constructor(
         reputationScore = reputationScore,
         isVerified = isVerified
     )
-
-    private fun deterministicDemoAddress(seed: String): String {
-        val hex = seed.encodeToByteArray().joinToString(separator = "") { byte ->
-            byte.toUByte().toString(16).padStart(2, '0')
-        }
-        return "0x${hex.padEnd(40, '0').take(40)}"
-    }
 }
