@@ -1,6 +1,7 @@
 package com.arcora.data.repository
 
 import com.arcora.data.api.ArcOraApi
+import com.arcora.data.api.GoogleAuthRequest
 import com.arcora.data.api.SignupRequest
 import com.arcora.data.api.UserProfileResponse
 import com.arcora.data.api.mapApiErrors
@@ -51,18 +52,33 @@ class ApiAuthRepository @Inject constructor(
         response.user.toDomain().also { userState.value = it }
     }
 
+    override suspend fun continueWithGoogle(idToken: String, displayName: String, username: String, smartAccountAddress: String): UserProfile = mapApiErrors {
+        val response = api.googleAuth(
+            GoogleAuthRequest(
+                idToken = idToken,
+                displayName = displayName,
+                username = username,
+                smartAccountAddress = smartAccountAddress
+            )
+        )
+
+        sessionStore.save(
+            SessionToken(
+                accessToken = response.session.accessToken,
+                refreshToken = response.session.refreshToken,
+                expiresAtEpochMillis = response.session.expiresAtEpochMillis
+            )
+        )
+
+        response.user.toDomain().also { userState.value = it }
+    }
+
     override suspend fun restoreSession(): Boolean = mapApiErrors {
         if (sessionStore.read() == null) {
             return@mapApiErrors false
         }
         api.me().toDomain().also { userState.value = it }
         true
-    }
-
-    override suspend fun continueWithGoogle(): UserProfile {
-        // Google identity selection is still a UI/auth-provider integration task. This keeps
-        // the app API-backed instead of mock-only while provider credentials are pending.
-        return createSmartWalletWithEmail("google.user@arcora.test", "Google ArcOra User")
     }
 
     override suspend fun signOut() {

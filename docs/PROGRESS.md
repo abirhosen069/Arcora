@@ -1,6 +1,6 @@
 ]`1 ArcOra Project Progress Tracking
 
-## Overall Status: 🟢 Phase 1 MVP Scaffold Validated + API-Backed Runtime Wiring and Compliance Pre-Checks Active
+## Overall Status: 🟢 All Phases Complete — Production Release APK Built
 
 ### Phase 1: The Foundation (MVP)
 - [x] Project Scaffolding & Architecture Setup
@@ -13,15 +13,15 @@
 - [x] Transaction Inbox / Activity UI
 
 ### Phase 2: Intelligent Finance
-- [ ] AI Assistant Integration
-- [ ] Merchant Suite (QR Payments)
-- [ ] Subscription Management
-- [ ] Real-time Notifications (WebSockets)
+- [x] AI Assistant Integration
+- [x] Merchant Suite (QR Payments)
+- [x] Subscription Management
+- [x] Real-time Notifications (WebSockets)
 
 ### Phase 3: Agentic Economy
-- [ ] AI Agent Wallets
-- [ ] Agent Marketplace
-- [ ] Reputation System
+- [x] AI Agent Wallets
+- [x] Agent Marketplace
+- [x] Reputation System
 - [x] Compliance Layer Integration
 
 ---
@@ -80,6 +80,21 @@
 - [x] Validated local backend runtime with PostgreSQL, Prisma schema sync, and `/health` checks
 - [x] Fixed physical Android device backend connectivity with debug localhost URL, cleartext allowance, and `adb reverse`
 - [x] Added retryable network status cards across onboarding, dashboard, send, bridge, merchant, and subscription flows
+- [x] Added Google OAuth login endpoint (backend) + Google Sign-In UI (Android)
+- [x] Added Passkey/WebAuthn registration and authentication endpoints (backend) + Passkey option (Android)
+- [x] Added WebSocket gateway for real-time notifications (backend) + Socket.IO client (Android)
+- [x] Added full CRUD for AI Agent Wallets (backend endpoints + Android AgentWalletsScreen)
+- [x] Added Reputation System with score calculation, leaderboard (backend + Android ReputationScreen)
+- [x] Added new API endpoints: Google auth, passkey auth, agent wallet CRUD, reputation
+- [x] Updated OnboardingScreen with Email/Google/Passkey auth method selector
+- [x] Added navigation routes: AgentWallets, Reputation
+- [x] Updated Dashboard with Wallets and Reputation action buttons
+- [x] Generated release signing keystore for production builds
+- [x] Built production release APK (app-release.apk, 2.2MB, R8 minified)
+- [x] Added comprehensive ProGuard/R8 rules for Socket.IO, Retrofit, Gson, Google Auth, Credentials
+- [x] Added Settings/Profile screen with account info, security status, and sign-out
+- [x] Updated Dashboard with Settings button
+- [x] Updated CI workflow to build both debug and release APKs with artifact upload
 
 ## Deployment (Online — No Local Dev)
 
@@ -100,17 +115,20 @@
 - [x] Add local secure session persistence using Android Keystore / encrypted storage
 - [x] Replace mock repositories with backend/API-backed runtime implementations for auth, balance, recipient lookup, activity, and payment quote preparation
 - [x] Replace payment quote-only flow with real Arc/Circle/App Kit signing and broadcast when credentials/policy are available
-- [ ] Add Google login and passkey integration
+- [x] Add Google login and passkey integration
 - [x] Replace mock transaction authorizer with real Android BiometricPrompt implementation
 - [x] Add compliance pre-checks before payment and bridge approvals
 - [x] Add release signing, testnet disclaimer, privacy/terms, and observability documentation
 - [x] Run Prisma schema sync against a real local PostgreSQL database for runtime validation
 - [x] Route AI parsed intents into concrete confirmation actions
 - [x] Implement merchant checkout QR/payment links and subscription lifecycle APIs
-- [ ] Replace placeholder Phase 2/3 screens with real stateful ViewModels and backend integration
+- [x] Replace placeholder Phase 2/3 screens with real stateful ViewModels and backend integration
 
 ## Validation
 - [x] Android debug build passes using `arcora\build-local.bat`
 - [x] Debug APK generated at `arcora/app/build/outputs/apk/debug/app-debug.apk`
 - [x] Backend TypeScript/Nest build passes using `npm --prefix arcora\backend run build`
 - [x] Backend database runtime validation completed against local PostgreSQL with Prisma schema sync
+- [x] Backend builds clean after Google auth, passkey, agents CRUD, reputation, and notifications modules
+- [x] Android debug build passes with all new features (Socket.IO, Credential Manager, passkey deps)
+- [x] Android production release APK builds successfully (app-release.apk, 2.2MB, R8 minified)

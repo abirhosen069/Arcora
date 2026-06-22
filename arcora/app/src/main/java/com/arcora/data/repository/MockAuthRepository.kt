@@ -26,7 +26,7 @@ class MockAuthRepository @Inject constructor() : AuthRepository {
         ).also { userState.value = it }
     }
 
-    override suspend fun continueWithGoogle(): UserProfile {
+    override suspend fun continueWithGoogle(idToken: String, displayName: String, username: String, smartAccountAddress: String): UserProfile {
         delay(500)
         return createSmartWalletWithEmail("alex@arcora.test", "Alex Morgan")
     }

@@ -25,13 +25,26 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "arcora2026"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "arcora-release"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "arcora2026"
+            }
+        }
+    }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -86,6 +99,14 @@ dependencies {
 
     // QR generation
     implementation("com.google.zxing:core:3.5.3")
+
+    // Real-time notifications (Socket.IO)
+    implementation("io.socket:socket.io-client:2.1.0")
+
+    // Credential Manager (Passkeys)
+    implementation("androidx.credentials:credentials:1.3.0-alpha01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0-alpha01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

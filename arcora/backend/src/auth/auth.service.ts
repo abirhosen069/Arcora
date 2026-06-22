@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../common/prisma.service';
-import { SignupDto } from './dto';
+import { SignupDto, GoogleAuthDto, PasskeyRegistrationFinishDto, PasskeyAuthenticationFinishDto } from './dto';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -43,6 +43,128 @@ export class AuthService {
             smartAccountAddress,
           },
         });
+
+    return {
+      user,
+      session: this.createSession(user.id),
+    };
+  }
+
+  async googleAuth(dto: GoogleAuthDto) {
+    const googleClientId = this.config.get<string>('GOOGLE_CLIENT_ID');
+    if (!googleClientId) {
+      throw new UnauthorizedException('Google authentication is not configured on this server.');
+    }
+
+    let email: string;
+    let name: string;
+    try {
+      const parts = dto.idToken.split('.');
+      if (parts.length !== 3) throw new Error('Invalid token format');
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+      email = payload.email;
+      name = payload.name || dto.displayName;
+      if (!email) throw new Error('No email in token');
+    } catch {
+      throw new UnauthorizedException('Invalid Google ID token.');
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
+    const smartAccountAddress = dto.smartAccountAddress.toLowerCase();
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: normalizedEmail }, { username }, { smartAccountAddress }],
+      },
+    });
+
+    const user = existingUser
+      ? await this.prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            displayName: name,
+            isVerified: true,
+            smartAccountAddress:
+              existingUser.smartAccountAddress === smartAccountAddress ? smartAccountAddress : existingUser.smartAccountAddress,
+          },
+        })
+      : await this.prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            username,
+            displayName: name,
+            smartAccountAddress,
+            isVerified: true,
+          },
+        });
+
+    return {
+      user,
+      session: this.createSession(user.id),
+    };
+  }
+
+  async passkeyRegistrationStart(email: string) {
+    const challenge = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+    const rpId = this.config.get<string>('PASSKEY_RPID') || 'arcora.app';
+    return {
+      challenge,
+      rp: { id: rpId, name: 'ArcOra' },
+      userVerification: 'preferred',
+      timeout: 60000,
+      email,
+    };
+  }
+
+  async passkeyRegistrationFinish(dto: PasskeyRegistrationFinishDto, challenge: string) {
+    const email = dto.email.toLowerCase();
+    const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
+    const smartAccountAddress = dto.smartAccountAddress.toLowerCase();
+
+    let user = await this.prisma.user.findFirst({ where: { email } });
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          username,
+          displayName: dto.displayName,
+          smartAccountAddress,
+          isVerified: true,
+        },
+      });
+    } else {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true },
+      });
+    }
+
+    return {
+      user,
+      session: this.createSession(user.id),
+    };
+  }
+
+  async passkeyAuthenticationStart(email: string) {
+    const challenge = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+    return {
+      challenge,
+      timeout: 60000,
+      userVerification: 'preferred',
+      email,
+    };
+  }
+
+  async passkeyAuthenticationFinish(dto: PasskeyAuthenticationFinishDto, challenge: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { email: { not: undefined } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('No account found for passkey authentication.');
+    }
 
     return {
       user,

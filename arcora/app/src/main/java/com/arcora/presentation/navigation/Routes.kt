@@ -11,4 +11,7 @@ sealed class ArcOraRoute(val route: String) {
     data object Merchant : ArcOraRoute("merchant")
     data object Subscriptions : ArcOraRoute("subscriptions")
     data object Agents : ArcOraRoute("agents")
+    data object AgentWallets : ArcOraRoute("agent-wallets")
+    data object Reputation : ArcOraRoute("reputation")
+    data object Settings : ArcOraRoute("settings")
 }

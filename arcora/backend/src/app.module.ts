@@ -11,7 +11,9 @@ import { ComplianceModule } from './compliance/compliance.module';
 import { validateEnvironment } from './env.validation';
 import { HealthController } from './health.controller';
 import { MerchantsModule } from './merchants/merchants.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ReputationModule } from './reputation/reputation.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
@@ -30,6 +32,8 @@ import { WalletModule } from './wallet/wallet.module';
     SubscriptionsModule,
     AgentsModule,
     ComplianceModule,
+    NotificationsModule,
+    ReputationModule,
   ],
   controllers: [HealthController],
   providers: [

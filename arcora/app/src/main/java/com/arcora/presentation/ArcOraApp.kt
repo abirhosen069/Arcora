@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.arcora.presentation.activity.ActivityScreen
+import com.arcora.presentation.agentwallets.AgentWalletsScreen
 import com.arcora.presentation.assistant.AssistantScreen
 import com.arcora.presentation.bridge.BridgeScreen
 import com.arcora.presentation.dashboard.DashboardScreen
@@ -17,6 +18,8 @@ import com.arcora.presentation.navigation.ArcOraRoute
 import com.arcora.presentation.onboarding.OnboardingScreen
 import com.arcora.presentation.payments.SendPaymentScreen
 import com.arcora.presentation.receive.ReceiveScreen
+import com.arcora.presentation.reputation.ReputationScreen
+import com.arcora.presentation.settings.SettingsScreen
 import com.arcora.presentation.session.SessionUiState
 import com.arcora.presentation.session.SessionViewModel
 import com.arcora.presentation.subscriptions.SubscriptionsScreen
@@ -53,7 +56,10 @@ private fun ArcOraNavHost(startAtDashboard: Boolean) {
                 onAssistant = { navController.navigate(ArcOraRoute.Assistant.route) },
                 onMerchant = { navController.navigate(ArcOraRoute.Merchant.route) },
                 onSubscriptions = { navController.navigate(ArcOraRoute.Subscriptions.route) },
-                onAgents = { navController.navigate(ArcOraRoute.Agents.route) }
+                onAgents = { navController.navigate(ArcOraRoute.Agents.route) },
+                onAgentWallets = { navController.navigate(ArcOraRoute.AgentWallets.route) },
+                onReputation = { navController.navigate(ArcOraRoute.Reputation.route) },
+                onSettings = { navController.navigate(ArcOraRoute.Settings.route) }
             )
         }
         composable(ArcOraRoute.Send.route) { SendPaymentScreen(onDone = { navController.popBackStack() }) }
@@ -64,5 +70,17 @@ private fun ArcOraNavHost(startAtDashboard: Boolean) {
         composable(ArcOraRoute.Merchant.route) { MerchantDashboardScreen(onDone = { navController.popBackStack() }) }
         composable(ArcOraRoute.Subscriptions.route) { SubscriptionsScreen(onDone = { navController.popBackStack() }) }
         composable(ArcOraRoute.Agents.route) { AgentMarketplaceScreen(onDone = { navController.popBackStack() }) }
+        composable(ArcOraRoute.AgentWallets.route) { AgentWalletsScreen(onDone = { navController.popBackStack() }) }
+        composable(ArcOraRoute.Reputation.route) { ReputationScreen(onDone = { navController.popBackStack() }) }
+        composable(ArcOraRoute.Settings.route) {
+            SettingsScreen(
+                onDone = { navController.popBackStack() },
+                onSignedOut = {
+                    navController.navigate(ArcOraRoute.Onboarding.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }

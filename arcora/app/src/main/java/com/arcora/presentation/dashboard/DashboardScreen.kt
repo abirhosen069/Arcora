@@ -39,6 +39,9 @@ fun DashboardScreen(
     onMerchant: () -> Unit,
     onSubscriptions: () -> Unit,
     onAgents: () -> Unit,
+    onAgentWallets: () -> Unit = {},
+    onReputation: () -> Unit = {},
+    onSettings: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -92,6 +95,12 @@ fun DashboardScreen(
             ActionButton("Merchant", onMerchant, Modifier.weight(1f))
             ActionButton("Subs", onSubscriptions, Modifier.weight(1f))
             ActionButton("Agents", onAgents, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            ActionButton("Wallets", onAgentWallets, Modifier.weight(1f))
+            ActionButton("Reputation", onReputation, Modifier.weight(1f))
+            ActionButton("Settings", onSettings, Modifier.weight(1f))
         }
         Spacer(Modifier.height(22.dp))
         Text("Unified balance", fontWeight = FontWeight.Bold)

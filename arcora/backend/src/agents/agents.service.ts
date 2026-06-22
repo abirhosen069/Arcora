@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../common/prisma.service';
 
 @Injectable()
 export class AgentsService {
+  constructor(private readonly prisma: PrismaService) {}
+
   marketplace() {
     return {
       categories: ['Research', 'Coding', 'Marketing', 'Trading', 'Operations'],
@@ -44,5 +47,55 @@ export class AgentsService {
       network: 'Arc Testnet',
       policy: 'Agents can request spend from delegated budgets but cannot bypass user biometric approval.',
     };
+  }
+
+  async createWallet(ownerId: string, name: string, description: string, monthlyBudget: string, permissions: string[]) {
+    const walletAddress = `0x${Buffer.from(`${ownerId}-${name}-${Date.now()}`).toString('hex').padEnd(40, '0').slice(0, 40)}`;
+    return this.prisma.agentWallet.create({
+      data: {
+        ownerId,
+        name,
+        description,
+        walletAddress,
+        monthlyBudget: parseFloat(monthlyBudget),
+        permissions,
+      },
+    });
+  }
+
+  async listWallets(ownerId: string) {
+    return this.prisma.agentWallet.findMany({
+      where: { ownerId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getWallet(id: string) {
+    const wallet = await this.prisma.agentWallet.findUnique({ where: { id } });
+    if (!wallet) throw new NotFoundException('Agent wallet not found.');
+    return wallet;
+  }
+
+  async updateWallet(id: string, ownerId: string, data: { name?: string; description?: string; monthlyBudget?: string; permissions?: string[] }) {
+    const wallet = await this.prisma.agentWallet.findUnique({ where: { id } });
+    if (!wallet) throw new NotFoundException('Agent wallet not found.');
+    if (wallet.ownerId !== ownerId) throw new BadRequestException('You can only update your own agent wallets.');
+
+    return this.prisma.agentWallet.update({
+      where: { id },
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.description && { description: data.description }),
+        ...(data.monthlyBudget && { monthlyBudget: parseFloat(data.monthlyBudget) }),
+        ...(data.permissions && { permissions: data.permissions }),
+      },
+    });
+  }
+
+  async deleteWallet(id: string, ownerId: string) {
+    const wallet = await this.prisma.agentWallet.findUnique({ where: { id } });
+    if (!wallet) throw new NotFoundException('Agent wallet not found.');
+    if (wallet.ownerId !== ownerId) throw new BadRequestException('You can only delete your own agent wallets.');
+    return this.prisma.agentWallet.delete({ where: { id } });
   }
 }

@@ -37,6 +37,10 @@ services:
         value: server_relay
       - key: CORS_ORIGINS
         value: "*"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: PASSKEY_RPID
+        value: arcora.app
       - key: RELAYER_PRIVATE_KEY
         sync: false
       - key: CIRCLE_KIT_KEY

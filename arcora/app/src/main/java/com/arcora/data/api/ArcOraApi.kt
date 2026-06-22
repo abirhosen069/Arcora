@@ -1,6 +1,7 @@
 package com.arcora.data.api
 
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.Path
@@ -10,6 +11,21 @@ import retrofit2.http.Query
 interface ArcOraApi {
     @POST("auth/signup")
     suspend fun signup(@Body request: SignupRequest): AuthSessionResponse
+
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): AuthSessionResponse
+
+    @POST("auth/passkey/register/start")
+    suspend fun passkeyRegistrationStart(@Body request: PasskeyStartRequest): PasskeyChallengeResponse
+
+    @POST("auth/passkey/register/finish")
+    suspend fun passkeyRegistrationFinish(@Body request: PasskeyRegistrationFinishRequest): AuthSessionResponse
+
+    @POST("auth/passkey/authenticate/start")
+    suspend fun passkeyAuthenticationStart(@Body request: PasskeyStartRequest): PasskeyChallengeResponse
+
+    @POST("auth/passkey/authenticate/finish")
+    suspend fun passkeyAuthenticationFinish(@Body request: PasskeyAuthenticationFinishRequest): AuthSessionResponse
 
     @GET("auth/me")
     suspend fun me(): UserProfileResponse
@@ -46,6 +62,27 @@ interface ArcOraApi {
 
     @GET("agents/marketplace")
     suspend fun agentMarketplace(): AgentMarketplaceResponse
+
+    @POST("agents/wallets")
+    suspend fun createAgentWallet(@Body request: CreateAgentWalletRequest): AgentWalletResponse
+
+    @GET("agents/wallets")
+    suspend fun listAgentWallets(): List<AgentWalletResponse>
+
+    @GET("agents/wallets/{id}")
+    suspend fun getAgentWallet(@Path("id") id: String): AgentWalletResponse
+
+    @PATCH("agents/wallets/{id}")
+    suspend fun updateAgentWallet(@Path("id") id: String, @Body request: UpdateAgentWalletRequest): AgentWalletResponse
+
+    @DELETE("agents/wallets/{id}")
+    suspend fun deleteAgentWallet(@Path("id") id: String)
+
+    @GET("reputation/me")
+    suspend fun myReputation(): ReputationResponse
+
+    @GET("reputation/leaderboard")
+    suspend fun reputationLeaderboard(@Query("limit") limit: Int = 10): List<LeaderboardEntry>
 
     @POST("merchants")
     suspend fun createMerchant(@Body request: CreateMerchantRequest): MerchantAccountResponse
@@ -306,4 +343,94 @@ data class CreateSubscriptionRequest(
     val amount: String,
     val interval: String,
     val nextChargeAt: String? = null
+)
+
+data class GoogleAuthRequest(
+    val idToken: String,
+    val displayName: String,
+    val username: String,
+    val smartAccountAddress: String
+)
+
+data class PasskeyStartRequest(
+    val email: String
+)
+
+data class PasskeyChallengeResponse(
+    val challenge: String,
+    val rp: PasskeyRp? = null,
+    val userVerification: String = "preferred",
+    val timeout: Long = 60000,
+    val email: String? = null
+)
+
+data class PasskeyRp(
+    val id: String,
+    val name: String
+)
+
+data class PasskeyRegistrationFinishRequest(
+    val id: String,
+    val rawId: String,
+    val type: String,
+    val attestationObject: String,
+    val clientDataJSON: String,
+    val email: String,
+    val displayName: String,
+    val username: String,
+    val smartAccountAddress: String
+)
+
+data class PasskeyAuthenticationFinishRequest(
+    val id: String,
+    val rawId: String,
+    val type: String,
+    val authenticatorData: String,
+    val clientDataJSON: String,
+    val signature: String
+)
+
+data class CreateAgentWalletRequest(
+    val name: String,
+    val description: String? = null,
+    val monthlyBudget: String,
+    val permissions: List<String> = emptyList()
+)
+
+data class UpdateAgentWalletRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val monthlyBudget: String? = null,
+    val permissions: List<String>? = null
+)
+
+data class AgentWalletResponse(
+    val id: String,
+    val ownerId: String,
+    val name: String,
+    val description: String? = null,
+    val walletAddress: String,
+    val monthlyBudget: String,
+    val permissions: List<String>,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+data class ReputationResponse(
+    val score: Int,
+    val level: String,
+    val factors: List<String>,
+    val sentTransactions: Int,
+    val receivedTransactions: Int,
+    val totalVolume: String,
+    val agentWallets: Int,
+    val isVerified: Boolean
+)
+
+data class LeaderboardEntry(
+    val id: String,
+    val username: String,
+    val displayName: String,
+    val reputationScore: Int,
+    val isVerified: Boolean
 )
