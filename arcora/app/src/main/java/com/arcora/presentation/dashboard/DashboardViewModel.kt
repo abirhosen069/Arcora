@@ -2,6 +2,7 @@ package com.arcora.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.arcora.domain.model.UserProfile
 import com.arcora.domain.repository.AuthRepository
 import com.arcora.domain.model.Portfolio
 import com.arcora.domain.model.TransactionRecord
@@ -38,6 +39,9 @@ class DashboardViewModel @Inject constructor(
         DashboardUiState(portfolio, activity, refresh.isRefreshing, refresh.error)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
+    val currentUser: UserProfile?
+        get() = authRepository.currentUser.value
+
     init {
         refreshLiveBalance()
     }
@@ -45,8 +49,7 @@ class DashboardViewModel @Inject constructor(
     fun refreshLiveBalance() {
         viewModelScope.launch {
             refreshState.update { it.copy(isRefreshing = true, error = null) }
-            val user = authRepository.currentUser.value
-            val address = user?.smartAccountAddress ?: DEFAULT_DEMO_ADDRESS
+            val address = currentUser?.smartAccountAddress ?: DEFAULT_DEMO_ADDRESS
 
             runCatching { observeDashboard.refreshPortfolio(address) }
                 .onSuccess { refreshState.update { it.copy(isRefreshing = false, error = null) } }

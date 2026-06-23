@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.arcora.domain.repository.AuthRepository
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraStatusCard
 import com.arcora.presentation.components.KeyValueRow
@@ -46,6 +47,7 @@ fun DashboardScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val portfolio = state.portfolio
+    val user = viewModel.currentUser
 
     Column(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState()).padding(24.dp)
@@ -53,10 +55,35 @@ fun DashboardScreen(
         Spacer(Modifier.height(28.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text("Good evening", color = ArcoraMuted)
-                Text("Your ArcOra", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                val greeting = when {
+                    java.time.LocalTime.now().hour < 12 -> "Good morning"
+                    java.time.LocalTime.now().hour < 18 -> "Good afternoon"
+                    else -> "Good evening"
+                }
+                Text(greeting, color = ArcoraMuted)
+                Text(
+                    user?.displayName ?: "Your ArcOra",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black
+                )
+                user?.username?.let { Text(it, color = ArcoraGreen, style = MaterialTheme.typography.bodyLarge) }
             }
             Pill("Arc_Testnet")
+        }
+
+        if (user != null) {
+            Spacer(Modifier.height(12.dp))
+            ArcOraCard {
+                Text("Account", fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                KeyValueRow("Username", user.username, ArcoraGreen)
+                Spacer(Modifier.height(6.dp))
+                KeyValueRow("Address", user.smartAccountAddress.take(16) + "...", ArcoraMuted)
+                Spacer(Modifier.height(6.dp))
+                KeyValueRow("Reputation", "${user.reputationScore}/100", ArcoraGreen)
+                Spacer(Modifier.height(6.dp))
+                KeyValueRow("Status", if (user.isVerified) "Verified" else "Active", ArcoraGreen)
+            }
         }
         Spacer(Modifier.height(24.dp))
         ArcOraCard(elevated = true) {

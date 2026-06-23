@@ -68,7 +68,7 @@ fun OnboardingScreen(
 
     val googleSignInClient = remember {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("YOUR_WEB_CLIENT_ID.apps.googleusercontent.com")
+            .requestIdToken("536085729408-umds32jg06rc31ahlc35phjgeak78u9p.apps.googleusercontent.com")
             .requestEmail()
             .build()
         GoogleSignIn.getClient(context, gso)

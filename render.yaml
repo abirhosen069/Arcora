@@ -38,7 +38,7 @@ services:
       - key: CORS_ORIGINS
         value: "*"
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        value: "536085729408-umds32jg06rc31ahlc35phjgeak78u9p.apps.googleusercontent.com"
       - key: PASSKEY_RPID
         value: arcora.app
       - key: RELAYER_PRIVATE_KEY
