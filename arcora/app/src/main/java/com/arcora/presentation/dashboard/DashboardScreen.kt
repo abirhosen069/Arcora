@@ -1,5 +1,9 @@
 package com.arcora.presentation.dashboard
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,10 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.arcora.domain.repository.AuthRepository
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraStatusCard
 import com.arcora.presentation.components.KeyValueRow
@@ -48,6 +52,7 @@ fun DashboardScreen(
     val state by viewModel.uiState.collectAsState()
     val portfolio = state.portfolio
     val user = viewModel.currentUser
+    val context = LocalContext.current
 
     Column(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState()).padding(24.dp)
@@ -78,7 +83,21 @@ fun DashboardScreen(
                 Spacer(Modifier.height(8.dp))
                 KeyValueRow("Username", user.username, ArcoraGreen)
                 Spacer(Modifier.height(6.dp))
-                KeyValueRow("Address", user.smartAccountAddress.take(16) + "...", ArcoraMuted)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Address", color = ArcoraMuted)
+                    TextButton(onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("wallet_address", user.smartAccountAddress)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Address copied!", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Text(
+                            text = user.smartAccountAddress.take(16) + "...",
+                            color = ArcoraGreen,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 KeyValueRow("Reputation", "${user.reputationScore}/100", ArcoraGreen)
                 Spacer(Modifier.height(6.dp))

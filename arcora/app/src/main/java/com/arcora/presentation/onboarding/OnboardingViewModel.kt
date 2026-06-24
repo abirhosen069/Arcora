@@ -59,6 +59,19 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun createWalletWithEmail(email: String, displayName: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            runCatching { authRepository.createSmartWalletWithEmail(email, displayName) }
+                .onSuccess { _uiState.update { it.copy(isLoading = false, walletReady = true) } }
+                .onFailure { throwable -> _uiState.update { it.copy(isLoading = false, error = throwable.message ?: "Account creation failed") } }
+        }
+    }
+
+    fun onError(message: String) {
+        _uiState.update { it.copy(isLoading = false, error = message) }
+    }
+
     private fun deterministicAddress(seed: String): String {
         val hex = seed.encodeToByteArray().joinToString("") { it.toUByte().toString(16).padStart(2, '0') }
         return "0x${hex.padEnd(40, '0').take(40)}"

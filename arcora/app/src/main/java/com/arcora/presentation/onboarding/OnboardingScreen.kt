@@ -57,11 +57,18 @@ fun OnboardingScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                account?.idToken?.let { token ->
-                    viewModel.onGoogleSignInResult(token, account.displayName ?: account.email ?: "Google User")
+                val token = account?.idToken
+                val email = account?.email
+                val name = account?.displayName ?: email ?: "Google User"
+                if (!token.isNullOrBlank()) {
+                    viewModel.onGoogleSignInResult(token, name)
+                } else if (!email.isNullOrBlank()) {
+                    viewModel.createWalletWithEmail(email, name)
+                } else {
+                    viewModel.onError("Google sign-in succeeded but no credentials were returned. Try email signup.")
                 }
             } catch (e: ApiException) {
-                viewModel.onGoogleSignInResult("demo_google_token", "Google ArcOra User")
+                viewModel.onError("Google sign-in failed (${e.statusCode}). Try email signup.")
             }
         }
     }
@@ -70,6 +77,7 @@ fun OnboardingScreen(
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken("536085729408-umds32jg06rc31ahlc35phjgeak78u9p.apps.googleusercontent.com")
             .requestEmail()
+            .requestProfile()
             .build()
         GoogleSignIn.getClient(context, gso)
     }
