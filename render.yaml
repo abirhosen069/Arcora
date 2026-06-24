@@ -41,6 +41,16 @@ services:
         value: "536085729408-umds32jg06rc31ahlc35phjgeak78u9p.apps.googleusercontent.com"
       - key: PASSKEY_RPID
         value: arcora.app
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
       - key: RELAYER_PRIVATE_KEY
         sync: false
       - key: CIRCLE_KIT_KEY

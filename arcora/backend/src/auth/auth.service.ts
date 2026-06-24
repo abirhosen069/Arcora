@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes } from 'crypto';
 import { hash, compare } from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
+import { EmailService } from '../email/email.service';
 import { RegisterStartDto, RegisterVerifyDto, LoginDto, RequestOtpDto } from './dto';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   private generateSmartAccountAddress(seed: string): string {
@@ -48,7 +50,7 @@ export class AuthService {
       data: { email, code, purpose: 'register', expiresAt },
     });
 
-    console.log(`[OTP] Registration code for ${email}: ${code}`);
+    await this.emailService.sendOtpCode(email, code, 'register');
 
     return {
       message: `Verification code sent to ${email}`,
@@ -133,7 +135,7 @@ export class AuthService {
       data: { email, code, purpose: 'login', expiresAt },
     });
 
-    console.log(`[OTP] Login code for ${email}: ${code}`);
+    await this.emailService.sendOtpCode(email, code, 'login');
 
     return { message: `Verification code sent to ${email}` };
   }
@@ -153,7 +155,7 @@ export class AuthService {
       data: { email, code, purpose: 'register', expiresAt },
     });
 
-    console.log(`[OTP] Registration code for ${email}: ${code}`);
+    await this.emailService.sendOtpCode(email, code, 'register');
 
     return { message: `Verification code sent to ${email}` };
   }

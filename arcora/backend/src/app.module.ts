@@ -8,6 +8,7 @@ import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { EmailModule } from './email/email.module';
 import { validateEnvironment } from './env.validation';
 import { HealthController } from './health.controller';
 import { MerchantsModule } from './merchants/merchants.module';
@@ -34,6 +35,7 @@ import { WalletModule } from './wallet/wallet.module';
     ComplianceModule,
     NotificationsModule,
     ReputationModule,
+    EmailModule,
   ],
   controllers: [HealthController],
   providers: [

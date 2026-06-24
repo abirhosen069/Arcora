@@ -24,7 +24,7 @@ class OtpViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(OtpUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun onCodeChange(value: String) = _uiState.update { it.copy(code = value.filter { c -> c.isDigit() }, error = null) }
+    fun onCodeChange(value: String) = _uiState.update { it.copy(code = value.filter { c -> c.isLetterOrDigit() }.uppercase(), error = null) }
 
     fun verify(email: String, passwordHash: String, displayName: String, username: String) {
         val code = _uiState.value.code
