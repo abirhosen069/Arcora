@@ -1,8 +1,13 @@
-import { IsEmail, IsEthereumAddress, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsString, Matches, MinLength, MaxLength } from 'class-validator';
 
-export class SignupDto {
+export class RegisterStartDto {
   @IsEmail()
   email!: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(128)
+  password!: string;
 
   @IsString()
   @MinLength(2)
@@ -11,86 +16,27 @@ export class SignupDto {
   @IsString()
   @Matches(/^@?[a-zA-Z0-9_]{3,20}$/)
   username!: string;
-
-  @IsOptional()
-  @IsEthereumAddress()
-  smartAccountAddress?: string;
 }
 
-export class GoogleAuthDto {
-  @IsString()
-  idToken!: string;
-
-  @IsString()
-  @MinLength(2)
-  displayName!: string;
-
-  @IsString()
-  @Matches(/^@?[a-zA-Z0-9_]{3,20}$/)
-  username!: string;
-
-  @IsOptional()
-  @IsEthereumAddress()
-  smartAccountAddress?: string;
-}
-
-export class PasskeyRegistrationStartDto {
-  @IsEmail()
-  email!: string;
-}
-
-export class PasskeyRegistrationFinishDto {
-  @IsString()
-  id!: string;
-
-  @IsString()
-  rawId!: string;
-
-  @IsString()
-  type!: string;
-
-  @IsString()
-  attestationObject!: string;
-
-  @IsString()
-  clientDataJSON!: string;
-
+export class RegisterVerifyDto {
   @IsEmail()
   email!: string;
 
   @IsString()
-  @MinLength(2)
-  displayName!: string;
-
-  @IsString()
-  @Matches(/^@?[a-zA-Z0-9_]{3,20}$/)
-  username!: string;
-
-  @IsEthereumAddress()
-  smartAccountAddress!: string;
+  @MinLength(4)
+  @MaxLength(8)
+  code!: string;
 }
 
-export class PasskeyAuthenticationStartDto {
+export class LoginDto {
   @IsEmail()
   email!: string;
+
+  @IsString()
+  password!: string;
 }
 
-export class PasskeyAuthenticationFinishDto {
-  @IsString()
-  id!: string;
-
-  @IsString()
-  rawId!: string;
-
-  @IsString()
-  type!: string;
-
-  @IsString()
-  authenticatorData!: string;
-
-  @IsString()
-  clientDataJSON!: string;
-
-  @IsString()
-  signature!: string;
+export class RequestOtpDto {
+  @IsEmail()
+  email!: string;
 }

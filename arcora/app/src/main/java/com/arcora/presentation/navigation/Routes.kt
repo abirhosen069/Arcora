@@ -2,6 +2,9 @@ package com.arcora.presentation.navigation
 
 sealed class ArcOraRoute(val route: String) {
     data object Onboarding : ArcOraRoute("onboarding")
+    data object Register : ArcOraRoute("register")
+    data object Otp : ArcOraRoute("otp/{email}/{passwordHash}/{displayName}/{username}")
+    data object Login : ArcOraRoute("login")
     data object Dashboard : ArcOraRoute("dashboard")
     data object Send : ArcOraRoute("send")
     data object Receive : ArcOraRoute("receive")

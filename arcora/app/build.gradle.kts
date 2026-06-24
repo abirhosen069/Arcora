@@ -73,7 +73,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
@@ -102,11 +101,6 @@ dependencies {
 
     // Real-time notifications (Socket.IO)
     implementation("io.socket:socket.io-client:2.1.0")
-
-    // Credential Manager (Passkeys)
-    implementation("androidx.credentials:credentials:1.3.0-alpha01")
-    implementation("androidx.credentials:credentials-play-services-auth:1.3.0-alpha01")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

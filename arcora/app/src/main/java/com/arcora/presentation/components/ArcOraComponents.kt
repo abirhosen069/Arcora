@@ -57,7 +57,8 @@ fun ArcOraTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPassword: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
@@ -65,7 +66,8 @@ fun ArcOraTextField(
         label = { Text(label) },
         singleLine = true,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(18.dp),
+        visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None
     )
 }
 

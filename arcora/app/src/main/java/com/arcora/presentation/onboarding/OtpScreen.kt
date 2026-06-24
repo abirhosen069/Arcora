@@ -21,21 +21,24 @@ import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.ArcOraStatusCard
 import com.arcora.presentation.components.ArcOraTextField
-import com.arcora.presentation.components.Pill
 import com.arcora.presentation.components.ScreenHeader
+import com.arcora.presentation.theme.ArcoraGreen
 import com.arcora.presentation.theme.ArcoraMuted
 
 @Composable
-fun OnboardingScreen(
+fun OtpScreen(
+    email: String,
+    passwordHash: String,
+    displayName: String,
+    username: String,
     onWalletReady: () -> Unit,
-    onGoToRegister: () -> Unit = {},
-    onGoToLogin: () -> Unit = {},
-    viewModel: OnboardingViewModel = hiltViewModel()
+    onBack: () -> Unit,
+    viewModel: OtpViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(state.walletReady) {
-        if (state.walletReady) onWalletReady()
+    LaunchedEffect(state.verified) {
+        if (state.verified) onWalletReady()
     }
 
     Column(
@@ -44,26 +47,34 @@ fun OnboardingScreen(
     ) {
         Column {
             Spacer(Modifier.height(34.dp))
-            Pill("Arc Testnet • USDC-first")
-            Spacer(Modifier.height(24.dp))
-            Text("ArcOra", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "A premium stablecoin wallet that feels like fintech, powered by Arc smart accounts.",
-                color = ArcoraMuted
-            )
-        }
-
-        ArcOraCard(elevated = true) {
-            ScreenHeader("Welcome to ArcOra", "Your stablecoin wallet. Simple, secure, powerful.")
+            ScreenHeader("Verify your email", "Enter the 6-digit code sent to $email")
             Spacer(Modifier.height(24.dp))
 
-            ArcOraPrimaryButton("Sign up with email", onGoToRegister)
-            Spacer(Modifier.height(12.dp))
-            ArcOraPrimaryButton("Log in with email", onGoToLogin)
+            ArcOraCard(elevated = true) {
+                ArcOraTextField(state.code, viewModel::onCodeChange, "Verification code")
+                Spacer(Modifier.height(18.dp))
+
+                state.error?.let { error ->
+                    ArcOraStatusCard(
+                        title = "Verification failed",
+                        message = error,
+                        actionLabel = "Retry",
+                        onAction = { viewModel.verify(email, passwordHash, displayName, username) },
+                        loading = state.isLoading
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                ArcOraPrimaryButton("Verify and create account", {
+                    viewModel.verify(email, passwordHash, displayName, username)
+                }, loading = state.isLoading)
+            }
 
             Spacer(Modifier.height(12.dp))
-            Text("Biometric approval protects every transaction.", color = ArcoraMuted, style = MaterialTheme.typography.bodySmall)
+            Text("Check your email inbox (and spam folder).", color = ArcoraMuted, style = MaterialTheme.typography.bodySmall)
         }
+
+        Spacer(Modifier.height(12.dp))
+        ArcOraPrimaryButton("Back", onBack)
     }
 }

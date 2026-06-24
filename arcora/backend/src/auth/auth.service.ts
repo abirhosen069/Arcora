@@ -1,10 +1,13 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes } from 'crypto';
+import { hash, compare } from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
-import { SignupDto, GoogleAuthDto, PasskeyRegistrationFinishDto, PasskeyAuthenticationFinishDto } from './dto';
+import { RegisterStartDto, RegisterVerifyDto, LoginDto, RequestOtpDto } from './dto';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const OTP_TTL_MS = 10 * 60 * 1000;
+const BCRYPT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
@@ -19,167 +22,140 @@ export class AuthService {
     return `0x${hash.padEnd(40, '0').slice(0, 40)}`;
   }
 
-  async signup(dto: SignupDto) {
+  private generateOtpCode(): string {
+    return randomBytes(3).toString('hex').toUpperCase();
+  }
+
+  async registerStart(dto: RegisterStartDto) {
     const email = dto.email.toLowerCase();
     const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
-    const smartAccountAddress = dto.smartAccountAddress
-      ? dto.smartAccountAddress.toLowerCase()
-      : this.generateSmartAccountAddress(email);
 
     const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { username }, { smartAccountAddress }],
-      },
+      where: { OR: [{ email }, { username }] },
     });
-
-    const user = existingUser
-      ? await this.prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            email: existingUser.email === email ? email : existingUser.email,
-            username: existingUser.username === username ? username : existingUser.username,
-            displayName: dto.displayName,
-            smartAccountAddress:
-              existingUser.smartAccountAddress === smartAccountAddress ? smartAccountAddress : existingUser.smartAccountAddress,
-          },
-        })
-      : await this.prisma.user.create({
-          data: {
-            email,
-            username,
-            displayName: dto.displayName,
-            smartAccountAddress,
-          },
-        });
-
-    return {
-      user,
-      session: this.createSession(user.id),
-    };
-  }
-
-  async googleAuth(dto: GoogleAuthDto) {
-    const googleClientId = this.config.get<string>('GOOGLE_CLIENT_ID');
-    if (!googleClientId) {
-      throw new UnauthorizedException('Google authentication is not configured on this server.');
+    if (existingUser) {
+      if (existingUser.email === email) {
+        throw new BadRequestException('An account with this email already exists. Please log in.');
+      }
+      throw new BadRequestException('This username is already taken. Choose another.');
     }
 
-    let email: string;
-    let name: string;
-    try {
-      const parts = dto.idToken.split('.');
-      if (parts.length !== 3) throw new Error('Invalid token format');
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-      email = payload.email;
-      name = payload.name || dto.displayName;
-      if (!email) throw new Error('No email in token');
-    } catch {
-      throw new UnauthorizedException('Invalid Google ID token.');
-    }
+    const passwordHash = await hash(dto.password, BCRYPT_ROUNDS);
+    const code = this.generateOtpCode();
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-    const normalizedEmail = email.toLowerCase();
-    const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
-    const smartAccountAddress = dto.smartAccountAddress
-      ? dto.smartAccountAddress.toLowerCase()
-      : this.generateSmartAccountAddress(normalizedEmail);
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: normalizedEmail }, { username }, { smartAccountAddress }],
-      },
+    await this.prisma.otpCode.create({
+      data: { email, code, purpose: 'register', expiresAt },
     });
 
-    const user = existingUser
-      ? await this.prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            displayName: name,
-            isVerified: true,
-            smartAccountAddress:
-              existingUser.smartAccountAddress === smartAccountAddress ? smartAccountAddress : existingUser.smartAccountAddress,
-          },
-        })
-      : await this.prisma.user.create({
-          data: {
-            email: normalizedEmail,
-            username,
-            displayName: name,
-            smartAccountAddress,
-            isVerified: true,
-          },
-        });
+    console.log(`[OTP] Registration code for ${email}: ${code}`);
 
     return {
-      user,
-      session: this.createSession(user.id),
-    };
-  }
-
-  async passkeyRegistrationStart(email: string) {
-    const challenge = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
-    const rpId = this.config.get<string>('PASSKEY_RPID') || 'arcora.app';
-    return {
-      challenge,
-      rp: { id: rpId, name: 'ArcOra' },
-      userVerification: 'preferred',
-      timeout: 60000,
+      message: `Verification code sent to ${email}`,
       email,
+      displayName: dto.displayName,
+      username,
+      passwordHash,
     };
   }
 
-  async passkeyRegistrationFinish(dto: PasskeyRegistrationFinishDto, challenge: string) {
+  async registerVerify(dto: RegisterVerifyDto, pendingData: { passwordHash: string; displayName: string; username: string }) {
     const email = dto.email.toLowerCase();
-    const username = dto.username.startsWith('@') ? dto.username.toLowerCase() : `@${dto.username.toLowerCase()}`;
-    const smartAccountAddress = dto.smartAccountAddress.toLowerCase();
+    const code = dto.code.toUpperCase();
 
-    let user = await this.prisma.user.findFirst({ where: { email } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          username,
-          displayName: dto.displayName,
-          smartAccountAddress,
-          isVerified: true,
-        },
-      });
-    } else {
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { isVerified: true },
-      });
-    }
-
-    return {
-      user,
-      session: this.createSession(user.id),
-    };
-  }
-
-  async passkeyAuthenticationStart(email: string) {
-    const challenge = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
-    return {
-      challenge,
-      timeout: 60000,
-      userVerification: 'preferred',
-      email,
-    };
-  }
-
-  async passkeyAuthenticationFinish(dto: PasskeyAuthenticationFinishDto, challenge: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { email: { not: undefined } },
+    const otp = await this.prisma.otpCode.findFirst({
+      where: { email, code, purpose: 'register', used: false },
       orderBy: { createdAt: 'desc' },
     });
 
+    if (!otp) {
+      throw new BadRequestException('Invalid verification code.');
+    }
+    if (otp.expiresAt < new Date()) {
+      throw new BadRequestException('Verification code has expired. Request a new one.');
+    }
+
+    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { used: true } });
+
+    const smartAccountAddress = this.generateSmartAccountAddress(email);
+    const username = pendingData.username.startsWith('@') ? pendingData.username : `@${pendingData.username}`;
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        username,
+        displayName: pendingData.displayName,
+        passwordHash: pendingData.passwordHash,
+        smartAccountAddress,
+        isVerified: true,
+      },
+    });
+
+    return {
+      user,
+      session: this.createSession(user.id),
+    };
+  }
+
+  async login(dto: LoginDto) {
+    const email = dto.email.toLowerCase();
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new UnauthorizedException('No account found for passkey authentication.');
+      throw new UnauthorizedException('No account found with this email. Please register first.');
+    }
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('This account uses social login. Please use the original login method.');
+    }
+
+    const passwordValid = await compare(dto.password, user.passwordHash);
+    if (!passwordValid) {
+      throw new UnauthorizedException('Incorrect password. Please try again.');
     }
 
     return {
       user,
       session: this.createSession(user.id),
     };
+  }
+
+  async requestOtp(dto: RequestOtpDto) {
+    const email = dto.email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('No account found with this email.');
+    }
+
+    const code = this.generateOtpCode();
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+    await this.prisma.otpCode.create({
+      data: { email, code, purpose: 'login', expiresAt },
+    });
+
+    console.log(`[OTP] Login code for ${email}: ${code}`);
+
+    return { message: `Verification code sent to ${email}` };
+  }
+
+  async requestRegisterOtp(dto: RequestOtpDto) {
+    const email = dto.email.toLowerCase();
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      throw new BadRequestException('An account with this email already exists.');
+    }
+
+    const code = this.generateOtpCode();
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+    await this.prisma.otpCode.create({
+      data: { email, code, purpose: 'register', expiresAt },
+    });
+
+    console.log(`[OTP] Registration code for ${email}: ${code}`);
+
+    return { message: `Verification code sent to ${email}` };
   }
 
   async getProfile(userId: string) {

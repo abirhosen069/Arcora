@@ -1,47 +1,45 @@
-import { Body, Controller, Get, Post, Session } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from './current-user.decorator';
 import { Public } from './public.decorator';
 import { AuthService } from './auth.service';
-import { SignupDto, GoogleAuthDto, PasskeyRegistrationStartDto, PasskeyRegistrationFinishDto, PasskeyAuthenticationStartDto, PasskeyAuthenticationFinishDto } from './dto';
+import { RegisterStartDto, RegisterVerifyDto, LoginDto, RequestOtpDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
-  @Post('signup')
-  signup(@Body() dto: SignupDto) {
-    return this.auth.signup(dto);
+  @Post('register/start')
+  registerStart(@Body() dto: RegisterStartDto) {
+    return this.auth.registerStart(dto);
   }
 
   @Public()
-  @Post('google')
-  googleAuth(@Body() dto: GoogleAuthDto) {
-    return this.auth.googleAuth(dto);
+  @Post('register/verify')
+  registerVerify(@Body() body: RegisterVerifyDto & { passwordHash: string; displayName: string; username: string }) {
+    return this.auth.registerVerify(body, {
+      passwordHash: body.passwordHash,
+      displayName: body.displayName,
+      username: body.username,
+    });
   }
 
   @Public()
-  @Post('passkey/register/start')
-  passkeyRegistrationStart(@Body() dto: PasskeyRegistrationStartDto) {
-    return this.auth.passkeyRegistrationStart(dto.email);
+  @Post('login')
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto);
   }
 
   @Public()
-  @Post('passkey/register/finish')
-  passkeyRegistrationFinish(@Body() dto: PasskeyRegistrationFinishDto) {
-    return this.auth.passkeyRegistrationFinish(dto, '');
+  @Post('otp/register')
+  requestRegisterOtp(@Body() dto: RequestOtpDto) {
+    return this.auth.requestRegisterOtp(dto);
   }
 
   @Public()
-  @Post('passkey/authenticate/start')
-  passkeyAuthenticationStart(@Body() dto: PasskeyAuthenticationStartDto) {
-    return this.auth.passkeyAuthenticationStart(dto.email);
-  }
-
-  @Public()
-  @Post('passkey/authenticate/finish')
-  passkeyAuthenticationFinish(@Body() dto: PasskeyAuthenticationFinishDto) {
-    return this.auth.passkeyAuthenticationFinish(dto, '');
+  @Post('otp/login')
+  requestLoginOtp(@Body() dto: RequestOtpDto) {
+    return this.auth.requestOtp(dto);
   }
 
   @Get('me')

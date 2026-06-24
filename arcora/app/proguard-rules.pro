@@ -65,3 +65,7 @@
 # Socket.IO
 -keep class io.socket.** { *; }
 -dontwarn io.socket.**
+
+# Google errorprone annotations (missing from Tink transitive deps)
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.crypto.tink.**

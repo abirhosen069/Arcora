@@ -9,23 +9,20 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface ArcOraApi {
-    @POST("auth/signup")
-    suspend fun signup(@Body request: SignupRequest): AuthSessionResponse
+    @POST("auth/register/start")
+    suspend fun registerStart(@Body request: RegisterStartRequest): RegisterStartResponse
 
-    @POST("auth/google")
-    suspend fun googleAuth(@Body request: GoogleAuthRequest): AuthSessionResponse
+    @POST("auth/register/verify")
+    suspend fun registerVerify(@Body request: RegisterVerifyRequest): AuthSessionResponse
 
-    @POST("auth/passkey/register/start")
-    suspend fun passkeyRegistrationStart(@Body request: PasskeyStartRequest): PasskeyChallengeResponse
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): AuthSessionResponse
 
-    @POST("auth/passkey/register/finish")
-    suspend fun passkeyRegistrationFinish(@Body request: PasskeyRegistrationFinishRequest): AuthSessionResponse
+    @POST("auth/otp/register")
+    suspend fun requestRegisterOtp(@Body request: OtpRequest): OtpResponse
 
-    @POST("auth/passkey/authenticate/start")
-    suspend fun passkeyAuthenticationStart(@Body request: PasskeyStartRequest): PasskeyChallengeResponse
-
-    @POST("auth/passkey/authenticate/finish")
-    suspend fun passkeyAuthenticationFinish(@Body request: PasskeyAuthenticationFinishRequest): AuthSessionResponse
+    @POST("auth/otp/login")
+    suspend fun requestLoginOtp(@Body request: OtpRequest): OtpResponse
 
     @GET("auth/me")
     suspend fun me(): UserProfileResponse
@@ -112,11 +109,40 @@ interface ArcOraApi {
     suspend fun cancelSubscription(@Path("id") id: String): SubscriptionResponse
 }
 
-data class SignupRequest(
+data class RegisterStartRequest(
+    val email: String,
+    val password: String,
+    val displayName: String,
+    val username: String
+)
+
+data class RegisterStartResponse(
+    val message: String,
     val email: String,
     val displayName: String,
     val username: String,
-    val smartAccountAddress: String? = null
+    val passwordHash: String
+)
+
+data class RegisterVerifyRequest(
+    val email: String,
+    val code: String,
+    val passwordHash: String,
+    val displayName: String,
+    val username: String
+)
+
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class OtpRequest(
+    val email: String
+)
+
+data class OtpResponse(
+    val message: String
 )
 
 data class AuthSessionResponse(
@@ -343,51 +369,6 @@ data class CreateSubscriptionRequest(
     val amount: String,
     val interval: String,
     val nextChargeAt: String? = null
-)
-
-data class GoogleAuthRequest(
-    val idToken: String,
-    val displayName: String,
-    val username: String,
-    val smartAccountAddress: String? = null
-)
-
-data class PasskeyStartRequest(
-    val email: String
-)
-
-data class PasskeyChallengeResponse(
-    val challenge: String,
-    val rp: PasskeyRp? = null,
-    val userVerification: String = "preferred",
-    val timeout: Long = 60000,
-    val email: String? = null
-)
-
-data class PasskeyRp(
-    val id: String,
-    val name: String
-)
-
-data class PasskeyRegistrationFinishRequest(
-    val id: String,
-    val rawId: String,
-    val type: String,
-    val attestationObject: String,
-    val clientDataJSON: String,
-    val email: String,
-    val displayName: String,
-    val username: String,
-    val smartAccountAddress: String
-)
-
-data class PasskeyAuthenticationFinishRequest(
-    val id: String,
-    val rawId: String,
-    val type: String,
-    val authenticatorData: String,
-    val clientDataJSON: String,
-    val signature: String
 )
 
 data class CreateAgentWalletRequest(

@@ -34,6 +34,7 @@ model User {
   email               String              @unique
   username            String              @unique
   displayName         String
+  passwordHash        String?
   smartAccountAddress String              @unique
   profileImageUrl     String?
   reputationScore     Int                 @default(50)
@@ -46,6 +47,18 @@ model User {
   paymentRequestsFrom PaymentRequest[]    @relation("PaymentRequestsFrom")
   paymentRequestsTo   PaymentRequest[]    @relation("PaymentRequestsTo")
   agentWallets        AgentWallet[]
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  purpose   String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, purpose])
 }
 
 model Transaction {

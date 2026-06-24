@@ -21,21 +21,19 @@ import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.ArcOraStatusCard
 import com.arcora.presentation.components.ArcOraTextField
-import com.arcora.presentation.components.Pill
 import com.arcora.presentation.components.ScreenHeader
 import com.arcora.presentation.theme.ArcoraMuted
 
 @Composable
-fun OnboardingScreen(
+fun LoginScreen(
     onWalletReady: () -> Unit,
-    onGoToRegister: () -> Unit = {},
-    onGoToLogin: () -> Unit = {},
-    viewModel: OnboardingViewModel = hiltViewModel()
+    onBack: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(state.walletReady) {
-        if (state.walletReady) onWalletReady()
+    LaunchedEffect(state.loggedIn) {
+        if (state.loggedIn) onWalletReady()
     }
 
     Column(
@@ -44,26 +42,34 @@ fun OnboardingScreen(
     ) {
         Column {
             Spacer(Modifier.height(34.dp))
-            Pill("Arc Testnet • USDC-first")
-            Spacer(Modifier.height(24.dp))
-            Text("ArcOra", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "A premium stablecoin wallet that feels like fintech, powered by Arc smart accounts.",
-                color = ArcoraMuted
-            )
-        }
-
-        ArcOraCard(elevated = true) {
-            ScreenHeader("Welcome to ArcOra", "Your stablecoin wallet. Simple, secure, powerful.")
+            ScreenHeader("Welcome back", "Log in to your ArcOra account.")
             Spacer(Modifier.height(24.dp))
 
-            ArcOraPrimaryButton("Sign up with email", onGoToRegister)
-            Spacer(Modifier.height(12.dp))
-            ArcOraPrimaryButton("Log in with email", onGoToLogin)
+            ArcOraCard(elevated = true) {
+                ArcOraTextField(state.email, viewModel::onEmailChange, "Email")
+                Spacer(Modifier.height(12.dp))
+                ArcOraTextField(state.password, viewModel::onPasswordChange, "Password", isPassword = true)
+
+                state.error?.let { error ->
+                    Spacer(Modifier.height(10.dp))
+                    ArcOraStatusCard(
+                        title = "Login failed",
+                        message = error,
+                        actionLabel = "Retry",
+                        onAction = viewModel::login,
+                        loading = state.isLoading
+                    )
+                }
+
+                Spacer(Modifier.height(18.dp))
+                ArcOraPrimaryButton("Log in", viewModel::login, loading = state.isLoading)
+            }
 
             Spacer(Modifier.height(12.dp))
             Text("Biometric approval protects every transaction.", color = ArcoraMuted, style = MaterialTheme.typography.bodySmall)
         }
+
+        Spacer(Modifier.height(12.dp))
+        ArcOraPrimaryButton("Back", onBack)
     }
 }
