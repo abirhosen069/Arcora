@@ -2,10 +2,9 @@ package com.arcora.presentation.agents
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arcora.data.api.AgentListingResponse
-import com.arcora.data.api.AgentMarketplaceResponse
-import com.arcora.data.api.ArcOraApi
-import com.arcora.data.api.mapApiErrors
+import com.arcora.domain.repository.AgentListing
+import com.arcora.domain.repository.AgentMarketplaceRepository
+import com.arcora.domain.repository.MarketplaceResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,22 +15,22 @@ import javax.inject.Inject
 data class AgentMarketplaceUiState(
     val categories: List<String> = emptyList(),
     val selectedCategory: String = "All",
-    val agents: List<AgentListingResponse> = emptyList(),
+    val agents: List<AgentListing> = emptyList(),
     val policy: String? = null,
     val network: String = "Arc Testnet",
     val settlementToken: String = "USDC",
-    val selectedAgent: AgentListingResponse? = null,
+    val selectedAgent: AgentListing? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val result: String? = null
 ) {
-    val visibleAgents: List<AgentListingResponse>
+    val visibleAgents: List<AgentListing>
         get() = if (selectedCategory == "All") agents else agents.filter { it.category == selectedCategory }
 }
 
 @HiltViewModel
 class AgentMarketplaceViewModel @Inject constructor(
-    private val api: ArcOraApi
+    private val marketplaceRepository: AgentMarketplaceRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentMarketplaceUiState())
     val uiState = _uiState.asStateFlow()
@@ -43,7 +42,7 @@ class AgentMarketplaceViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, result = null) }
-            runCatching { mapApiErrors { api.agentMarketplace() } }
+            runCatching { marketplaceRepository.getMarketplace() }
                 .onSuccess(::applyMarketplace)
                 .onFailure { throwable ->
                     _uiState.update {
@@ -60,11 +59,11 @@ class AgentMarketplaceViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategory = category, result = null, error = null) }
     }
 
-    fun selectAgent(agent: AgentListingResponse) {
+    fun selectAgent(agent: AgentListing) {
         _uiState.update { it.copy(selectedAgent = agent, result = null, error = null) }
     }
 
-    fun requestDelegatedWallet(agent: AgentListingResponse) {
+    fun requestDelegatedWallet(agent: AgentListing) {
         _uiState.update {
             it.copy(
                 selectedAgent = agent,
@@ -74,7 +73,7 @@ class AgentMarketplaceViewModel @Inject constructor(
         }
     }
 
-    private fun applyMarketplace(response: AgentMarketplaceResponse) {
+    private fun applyMarketplace(response: MarketplaceResult) {
         _uiState.update {
             it.copy(
                 categories = listOf("All") + response.categories.distinct(),

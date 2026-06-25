@@ -43,4 +43,8 @@ export class SendPaymentDto extends QuotePaymentDto {
   @IsOptional()
   @IsString()
   userOperationHash?: string;
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
 }

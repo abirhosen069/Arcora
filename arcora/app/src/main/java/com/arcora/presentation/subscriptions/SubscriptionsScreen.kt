@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.arcora.data.api.SubscriptionResponse
+import com.arcora.domain.repository.Subscription
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.ArcOraStatusCard
@@ -88,7 +88,7 @@ fun SubscriptionsScreen(
 }
 
 @Composable
-private fun SubscriptionRow(subscription: SubscriptionResponse, viewModel: SubscriptionsViewModel) {
+private fun SubscriptionRow(subscription: Subscription, viewModel: SubscriptionsViewModel) {
     KeyValueRow("Plan", subscription.merchantId ?: subscription.agentWalletId ?: subscription.id.take(8), ArcoraGreen)
     Spacer(Modifier.height(6.dp))
     KeyValueRow("Amount", "${subscription.amount} ${subscription.token} / ${subscription.interval}")

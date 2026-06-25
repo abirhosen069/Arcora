@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arcora-db
+    environment:
+      POSTGRES_USER: arcora
+      POSTGRES_PASSWORD: arcora
+      POSTGRES_DB: arcora
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcora"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: arcora-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./arcora/backend
+      dockerfile: Dockerfile
+    container_name: arcora-api
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: postgresql://arcora:arcora@postgres:5432/arcora
+      JWT_SECRET: local-dev-secret-do-not-use-in-production
+      ARC_CHAIN_ID: "5042002"
+      ARC_RPC_URL: https://rpc.testnet.arc.network
+      ARC_USDC_ADDRESS: "0x3600000000000000000000000000000000000000"
+      TRANSACTION_EXECUTION_MODE: disabled
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

@@ -2,11 +2,8 @@ package com.arcora.presentation.agentwallets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arcora.data.api.AgentWalletResponse
-import com.arcora.data.api.ArcOraApi
-import com.arcora.data.api.CreateAgentWalletRequest
-import com.arcora.data.api.UpdateAgentWalletRequest
-import com.arcora.data.api.mapApiErrors
+import com.arcora.domain.repository.AgentWallet
+import com.arcora.domain.repository.AgentWalletRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AgentWalletsUiState(
-    val wallets: List<AgentWalletResponse> = emptyList(),
+    val wallets: List<AgentWallet> = emptyList(),
     val name: String = "",
     val description: String = "",
     val monthlyBudget: String = "50.00",
@@ -26,7 +23,7 @@ data class AgentWalletsUiState(
 
 @HiltViewModel
 class AgentWalletsViewModel @Inject constructor(
-    private val api: ArcOraApi
+    private val agentWalletRepository: AgentWalletRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentWalletsUiState())
     val uiState = _uiState.asStateFlow()
@@ -42,7 +39,7 @@ class AgentWalletsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            runCatching { mapApiErrors { api.listAgentWallets() } }
+            runCatching { agentWalletRepository.list() }
                 .onSuccess { list -> _uiState.update { it.copy(isLoading = false, wallets = list) } }
                 .onFailure { t -> _uiState.update { it.copy(isLoading = false, error = t.message ?: "Could not load agent wallets") } }
         }
@@ -61,15 +58,12 @@ class AgentWalletsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, result = null) }
             runCatching {
-                mapApiErrors {
-                    api.createAgentWallet(
-                        CreateAgentWalletRequest(
-                            name = state.name,
-                            description = state.description.ifBlank { null },
-                            monthlyBudget = state.monthlyBudget
-                        )
-                    )
-                }
+                agentWalletRepository.create(
+                    name = state.name,
+                    description = state.description.ifBlank { null },
+                    monthlyBudget = state.monthlyBudget,
+                    permissions = emptyList()
+                )
             }
                 .onSuccess { wallet ->
                     _uiState.update {
@@ -89,7 +83,7 @@ class AgentWalletsViewModel @Inject constructor(
     fun deleteWallet(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, result = null) }
-            runCatching { mapApiErrors { api.deleteAgentWallet(id) } }
+            runCatching { agentWalletRepository.delete(id) }
                 .onSuccess {
                     _uiState.update {
                         it.copy(

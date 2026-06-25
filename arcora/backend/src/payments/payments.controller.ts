@@ -28,7 +28,7 @@ export class PaymentsController {
   }
 
   @Patch('request/:id')
-  resolve(@Param('id') id: string, @Body() dto: ResolvePaymentRequestDto) {
-    return this.payments.resolve(id, dto);
+  resolve(@Param('id') id: string, @Body() dto: ResolvePaymentRequestDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.payments.resolve(id, dto, user.id);
   }
 }

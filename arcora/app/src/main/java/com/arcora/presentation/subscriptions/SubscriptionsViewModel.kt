@@ -2,11 +2,9 @@ package com.arcora.presentation.subscriptions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arcora.data.api.ArcOraApi
-import com.arcora.data.api.CreateSubscriptionRequest
-import com.arcora.data.api.SubscriptionResponse
-import com.arcora.data.api.mapApiErrors
 import com.arcora.domain.repository.AuthRepository
+import com.arcora.domain.repository.Subscription
+import com.arcora.domain.repository.SubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +13,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SubscriptionsUiState(
-    val subscriptions: List<SubscriptionResponse> = emptyList(),
+    val subscriptions: List<Subscription> = emptyList(),
     val amount: String = "15.00",
     val interval: String = "monthly",
     val isLoading: Boolean = false,
@@ -25,7 +23,7 @@ data class SubscriptionsUiState(
 
 @HiltViewModel
 class SubscriptionsViewModel @Inject constructor(
-    private val api: ArcOraApi,
+    private val subscriptionRepository: SubscriptionRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SubscriptionsUiState())
@@ -40,17 +38,17 @@ class SubscriptionsViewModel @Inject constructor(
     }
 
     fun refresh() {
-        val userId = authRepository.currentUser.value?.id ?: "demo_owner"
+        val userId = authRepository.currentUser.value?.id ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            runCatching { mapApiErrors { api.subscriptions(userId) } }
+            runCatching { subscriptionRepository.list(userId) }
                 .onSuccess { list -> _uiState.update { it.copy(isLoading = false, subscriptions = list) } }
                 .onFailure { throwable -> _uiState.update { it.copy(isLoading = false, error = throwable.message ?: "Could not load subscriptions") } }
         }
     }
 
     fun createDemoSubscription() {
-        val userId = authRepository.currentUser.value?.id ?: "demo_owner"
+        val userId = authRepository.currentUser.value?.id ?: return
         val state = _uiState.value
         if (state.amount.toBigDecimalOrNull() == null) {
             _uiState.update { it.copy(error = "Enter a valid subscription amount.") }
@@ -59,16 +57,13 @@ class SubscriptionsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, result = null) }
             runCatching {
-                mapApiErrors {
-                    api.createSubscription(
-                        CreateSubscriptionRequest(
-                            userId = userId,
-                            agentWalletId = "demo_agent_wallet",
-                            amount = state.amount,
-                            interval = state.interval.ifBlank { "monthly" }
-                        )
-                    )
-                }
+                subscriptionRepository.create(
+                    userId = userId,
+                    merchantId = null,
+                    agentWalletId = "demo_agent_wallet",
+                    amount = state.amount,
+                    interval = state.interval.ifBlank { "monthly" }
+                )
             }
                 .onSuccess { subscription ->
                     _uiState.update {
@@ -83,14 +78,14 @@ class SubscriptionsViewModel @Inject constructor(
         }
     }
 
-    fun pause(id: String) = lifecycleAction("Paused") { api.pauseSubscription(id) }
-    fun renew(id: String) = lifecycleAction("Renewed") { api.renewSubscription(id) }
-    fun cancel(id: String) = lifecycleAction("Canceled") { api.cancelSubscription(id) }
+    fun pause(id: String) = lifecycleAction("Paused") { subscriptionRepository.pause(id) }
+    fun renew(id: String) = lifecycleAction("Renewed") { subscriptionRepository.renew(id) }
+    fun cancel(id: String) = lifecycleAction("Canceled") { subscriptionRepository.cancel(id) }
 
-    private fun lifecycleAction(label: String, action: suspend () -> SubscriptionResponse) {
+    private fun lifecycleAction(label: String, action: suspend () -> Subscription) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, result = null) }
-            runCatching { mapApiErrors { action() } }
+            runCatching { action() }
                 .onSuccess { updated ->
                     _uiState.update { state ->
                         state.copy(

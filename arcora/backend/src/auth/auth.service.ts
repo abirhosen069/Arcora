@@ -1,12 +1,14 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { hash, compare } from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
+import { AuditService } from '../common/audit.service';
 import { EmailService } from '../email/email.service';
-import { RegisterStartDto, RegisterVerifyDto, LoginDto, RequestOtpDto } from './dto';
+import { RegisterStartDto, RegisterVerifyDto, LoginDto, RequestOtpDto, GoogleAuthDto } from './dto';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const BCRYPT_ROUNDS = 10;
 
@@ -16,6 +18,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly emailService: EmailService,
+    private readonly audit: AuditService,
   ) {}
 
   private generateSmartAccountAddress(seed: string): string {
@@ -93,6 +96,8 @@ export class AuthService {
       },
     });
 
+    await this.audit.logAuth(user.id, 'register.success');
+
     return {
       user,
       session: this.createSession(user.id),
@@ -104,16 +109,21 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
+      await this.audit.logAuth('', 'login.failed', undefined, `Email not found: ${email}`);
       throw new UnauthorizedException('No account found with this email. Please register first.');
     }
     if (!user.passwordHash) {
+      await this.audit.logAuth(user.id, 'login.failed', undefined, 'Social login account');
       throw new UnauthorizedException('This account uses social login. Please use the original login method.');
     }
 
     const passwordValid = await compare(dto.password, user.passwordHash);
     if (!passwordValid) {
+      await this.audit.logAuth(user.id, 'login.failed', undefined, 'Invalid password');
       throw new UnauthorizedException('Incorrect password. Please try again.');
     }
+
+    await this.audit.logAuth(user.id, 'login.success');
 
     return {
       user,
@@ -164,22 +174,135 @@ export class AuthService {
     return this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
   }
 
+  async googleAuth(dto: GoogleAuthDto) {
+    const googleUser = this.verifyGoogleToken(dto.idToken);
+    if (!googleUser) {
+      throw new UnauthorizedException('Invalid Google ID token.');
+    }
+
+    let user = await this.prisma.user.findUnique({ where: { email: googleUser.email } });
+
+    if (!user) {
+      const username = `@${googleUser.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+      const smartAccountAddress = this.generateSmartAccountAddress(googleUser.email);
+
+      const existingUsername = await this.prisma.user.findUnique({ where: { username } });
+      const finalUsername = existingUsername ? `${username}${Date.now()}` : username;
+
+      user = await this.prisma.user.create({
+        data: {
+          email: googleUser.email,
+          username: finalUsername,
+          displayName: googleUser.name || dto.displayName || googleUser.email.split('@')[0],
+          smartAccountAddress,
+          profileImageUrl: googleUser.picture,
+          isVerified: true,
+        },
+      });
+    }
+
+    return {
+      user,
+      session: this.createSession(user.id),
+    };
+  }
+
+  private verifyGoogleToken(idToken: string): { email: string; name?: string; picture?: string } | null {
+    try {
+      const parts = idToken.split('.');
+      if (parts.length !== 3) return null;
+
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+
+      const clientId = this.config.get<string>('GOOGLE_WEB_CLIENT_ID');
+      if (clientId && payload.aud !== clientId) {
+        const androidClientId = this.config.get<string>('GOOGLE_ANDROID_CLIENT_ID');
+        if (androidClientId && payload.aud !== androidClientId) {
+          return null;
+        }
+      }
+
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        return null;
+      }
+
+      return {
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async updateProfileImage(userId: string, file: Express.Multer.File) {
+    const imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileImageUrl: imageUrl },
+    });
+    return { profileImageUrl: user.profileImageUrl };
+  }
+
+  async refreshSession(refreshToken: string) {
+    const secret = this.config.get<string>('JWT_SECRET') ?? 'development_only_arcora_secret';
+    const parts = refreshToken.split('.');
+    if (parts.length !== 2) {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
+
+    const [encodedPayload, signature] = parts;
+    const expectedSignature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+
+    const provided = Buffer.from(signature);
+    const expected = Buffer.from(expectedSignature);
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
+
+    try {
+      const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+      if (payload.typ !== 'arcora_refresh_token') {
+        throw new UnauthorizedException('Invalid refresh token.');
+      }
+      if (payload.exp * 1000 <= Date.now()) {
+        throw new UnauthorizedException('Refresh token expired.');
+      }
+      return this.createSession(payload.sub);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
+  }
+
   private createSession(userId: string) {
     const expiresAtEpochMillis = Date.now() + SESSION_TTL_MS;
-    const payload = {
+    const refreshExpiresAtEpochMillis = Date.now() + REFRESH_TTL_MS;
+
+    const accessPayload = {
       sub: userId,
       typ: 'arcora_testnet_session',
       exp: Math.floor(expiresAtEpochMillis / 1000),
     };
-    const payloadJson = JSON.stringify(payload);
-    const encodedPayload = Buffer.from(payloadJson).toString('base64url');
+    const accessPayloadJson = JSON.stringify(accessPayload);
+    const encodedAccessPayload = Buffer.from(accessPayloadJson).toString('base64url');
     const secret = this.config.get<string>('JWT_SECRET') ?? 'development_only_arcora_secret';
-    const signature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+    const accessSignature = createHmac('sha256', secret).update(encodedAccessPayload).digest('base64url');
+
+    const refreshPayload = {
+      sub: userId,
+      typ: 'arcora_refresh_token',
+      exp: Math.floor(refreshExpiresAtEpochMillis / 1000),
+    };
+    const refreshPayloadJson = JSON.stringify(refreshPayload);
+    const encodedRefreshPayload = Buffer.from(refreshPayloadJson).toString('base64url');
+    const refreshSignature = createHmac('sha256', secret).update(encodedRefreshPayload).digest('base64url');
 
     return {
-      accessToken: `${encodedPayload}.${signature}`,
-      refreshToken: null,
+      accessToken: `${encodedAccessPayload}.${accessSignature}`,
+      refreshToken: `${encodedRefreshPayload}.${refreshSignature}`,
       expiresAtEpochMillis,
+      refreshExpiresAtEpochMillis,
     };
   }
 }

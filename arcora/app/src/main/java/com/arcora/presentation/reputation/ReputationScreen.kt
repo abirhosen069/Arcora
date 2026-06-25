@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.arcora.data.api.LeaderboardEntry
+import com.arcora.domain.repository.LeaderboardEntry
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.ArcOraStatusCard

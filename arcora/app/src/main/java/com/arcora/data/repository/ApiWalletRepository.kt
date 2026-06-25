@@ -104,25 +104,57 @@ class ApiWalletRepository @Inject constructor(
         }
     }
 
-    override suspend fun createBridgeQuote(sourceChain: String, amount: Money): BridgeQuote {
-        return BridgeQuote(
+    override suspend fun createBridgeQuote(sourceChain: String, amount: Money): BridgeQuote = mapApiErrors {
+        val fromAddress = authRepository.currentUser.value?.smartAccountAddress
+            ?: error("Sign in to create a bridge quote.")
+
+        val quote = api.quotePayment(
+            com.arcora.data.api.QuotePaymentRequest(
+                fromAddress = fromAddress,
+                toAddress = fromAddress,
+                amount = amount.amount.toPlainString()
+            )
+        )
+
+        BridgeQuote(
             sourceChain = sourceChain,
             amount = amount,
-            estimatedTime = "Pending live route",
-            routeSummary = "$sourceChain USDC → CCTP/App Kit → Arc Testnet USDC"
+            estimatedTime = "2-5 minutes",
+            routeSummary = "$sourceChain USDC → CCTP → Arc Testnet USDC",
+            destinationChain = "Arc_Testnet",
+            fee = quote.estimatedFee
         )
     }
 
-    override suspend fun bridgeToArc(quote: BridgeQuote): TransactionRecord {
-        return TransactionRecord(
-            id = "bridge_quote_${System.currentTimeMillis()}",
-            title = "Bridge route prepared",
-            subtitle = "Live bridge execution requires Arc/Circle route credentials.",
+    override suspend fun bridgeToArc(quote: BridgeQuote): TransactionRecord = mapApiErrors {
+        val fromAddress = authRepository.currentUser.value?.smartAccountAddress
+            ?: error("Sign in to execute bridge.")
+
+        val response = api.sendPayment(
+            SendPaymentRequest(
+                fromAddress = fromAddress,
+                toAddress = fromAddress,
+                amount = quote.amount.amount.toPlainString(),
+                note = "Bridge from ${quote.sourceChain}"
+            )
+        )
+
+        TransactionRecord(
+            id = response.id,
+            title = "Bridge from ${quote.sourceChain}",
+            subtitle = response.explorerUrl ?: response.blockchainHash,
             amount = quote.amount,
             type = TransactionType.BridgeCompleted,
-            status = TransactionStatus.Pending,
+            status = when (response.status.lowercase()) {
+                "completed" -> TransactionStatus.Completed
+                "failed" -> TransactionStatus.Failed
+                else -> TransactionStatus.Pending
+            },
             createdAtLabel = "Just now"
-        ).also { activity.value = listOf(it) + activity.value }
+        ).also { record ->
+            activity.value = listOf(record) + activity.value
+            authRepository.currentUser.value?.id?.let { refreshActivity(it) }
+        }
     }
 
     suspend fun refreshActivity(userId: String): List<TransactionRecord> = mapApiErrors {

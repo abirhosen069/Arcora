@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.arcora.data.api.AgentWalletResponse
+import com.arcora.domain.repository.AgentWallet
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.ArcOraStatusCard
@@ -95,7 +95,7 @@ fun AgentWalletsScreen(
 }
 
 @Composable
-private fun AgentWalletRow(wallet: AgentWalletResponse, viewModel: AgentWalletsViewModel) {
+private fun AgentWalletRow(wallet: AgentWallet, viewModel: AgentWalletsViewModel) {
     KeyValueRow(wallet.name, "${wallet.monthlyBudget} USDC/mo", ArcoraGreen)
     Spacer(Modifier.height(6.dp))
     wallet.description?.let { Text(it, color = ArcoraMuted, style = MaterialTheme.typography.bodySmall) }

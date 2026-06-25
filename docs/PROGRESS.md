@@ -132,3 +132,63 @@
 - [x] Backend builds clean after Google auth, passkey, agents CRUD, reputation, and notifications modules
 - [x] Android debug build passes with all new features (Socket.IO, Credential Manager, passkey deps)
 - [x] Android production release APK builds successfully (app-release.apk, 2.2MB, R8 minified)
+
+## Production Hardening
+
+- [x] Added rate limiting with `@nestjs/throttler` (global 30 req/min, auth endpoints 3-5 req/min)
+- [x] Added Google OAuth login endpoint (backend) with token verification
+- [x] Added subscription auto-charge scheduler with `@nestjs/schedule` (every 5 minutes)
+- [x] Added FK constraints in Prisma schema (MerchantAccount → User, Subscription → User)
+- [x] Added refresh token support (30-day expiry, `/auth/refresh` endpoint)
+- [x] Added profile image upload endpoint (`/auth/profile-image`)
+- [x] Implemented bridge execution via server relay (Android `ApiWalletRepository.bridgeToArc()`)
+- [x] Added `MockCompliancePolicy` fallback for debug builds
+- [x] Added debug/release compliance policy switching via `BuildConfig.DEBUG`
+- [x] Added Google auth and refresh token API contracts (Android `ArcOraApi`)
+- [x] Added fee display in Bridge UI
+- [x] Added AuditLog model and AuditService for all state-changing operations
+- [x] Added audit logging to auth, payments, agents, and subscriptions services
+- [x] Replaced hardcoded agent marketplace with DB-backed AgentListing model (auto-seeds on first access)
+- [x] Added Firebase Cloud Messaging push notifications (backend PushService + Android PushNotificationService)
+- [x] Added PushToken model and registration/removal endpoints
+- [x] Added deep link handling for arcora://pay/ and arcora://checkout/ QR codes
+- [x] Added pre-filled SendPaymentScreen via deep link recipient/amount/note parameters
+- [x] Created domain repository interfaces for Reputation, Profile, AgentWallet, AgentMarketplace, Merchant, Subscription
+- [x] Created API implementations for all 6 new domain repositories
+- [x] Rewrote Settings, Reputation, AgentWallets, AgentMarketplace, MerchantDashboard, Subscriptions ViewModels to use domain repositories
+- [x] Updated AgentWalletsScreen, SubscriptionsScreen, AgentMarketplaceScreen, ReputationScreen to use domain models
+- [x] Added 51 backend unit tests (8 test suites: auth, compliance, reputation, AI, merchants, payments, subscriptions, agents)
+
+## Production Hardening (Round 2)
+
+- [x] Added `npm test` to CI backend job
+- [x] Added Android unit test step (`testDebugUnitTest`) to CI
+- [x] Added Firebase Cloud Messaging ProGuard keep rules
+- [x] Locked CORS_ORIGINS to `arcora.app` domains in render.yaml
+- [x] Created `docker-compose.yml` for local dev (Postgres + Redis + backend)
+
+## Sentry Crash Reporting
+
+- [x] Added `@sentry/nestjs` and `@sentry/node` to backend with DSN-based init
+- [x] Added `sentry-android` SDK to Android with init in ArcOraApplication
+- [x] Added `SENTRY_DSN` env var to render.yaml and gradle.properties
+
+## Idempotency Keys
+
+- [x] Added `IdempotencyKey` model to Prisma schema
+- [x] Created `IdempotencyService` with checkOrCreate, store, and cleanup methods
+- [x] Integrated idempotency into `PaymentsService.sendPayment` with auto-generated and client-provided keys
+
+## Database Backup & Migration Docs
+
+- [x] Updated DEPLOY.md with migration guide, backup/restore procedures, Docker local dev, security notes
+
+## Android Unit Tests
+
+- [x] Added test dependencies: kotlinx-coroutines-test, mockk, turbine
+- [x] ReputationViewModelTest (3 tests: initial load, refresh, error handling)
+- [x] BridgeViewModelTest (6 tests: initial state, source chain, amount filtering, preview, errors)
+- [x] AgentWalletsViewModelTest (5 tests: load, name change, create validation, create call, delete)
+- [x] SubscriptionsViewModelTest (5 tests: load, amount/interval changes, invalid amount error)
+- [x] AgentMarketplaceViewModelTest (4 tests: load, category filtering, select all, refresh)
+- [x] BridgeToArcUseCaseTest (4 tests: quote, execute, compliance block, user reject)

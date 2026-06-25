@@ -69,3 +69,13 @@
 # Google errorprone annotations (missing from Tink transitive deps)
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn com.google.crypto.tink.**
+
+# Firebase Cloud Messaging
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.arcora.notifications.** { *; }
+
+# Firebase Analytics (transitive)
+-keep class com.google.android.gms.measurement.** { *; }
+-dontwarn com.google.android.gms.measurement.**

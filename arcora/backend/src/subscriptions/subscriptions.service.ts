@@ -1,11 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { TransactionStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
+import { AuditService } from '../common/audit.service';
 import { CreateSubscriptionDto, UpdateSubscriptionStatusDto } from './subscriptions.dto';
 
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   list(userId: string) {
     return this.prisma.subscription.findMany({
@@ -15,12 +19,12 @@ export class SubscriptionsService {
     });
   }
 
-  create(dto: CreateSubscriptionDto) {
+  async create(dto: CreateSubscriptionDto) {
     if (!dto.merchantId && !dto.agentWalletId) {
       throw new BadRequestException('A subscription requires merchantId or agentWalletId.');
     }
 
-    return this.prisma.subscription.create({
+    const subscription = await this.prisma.subscription.create({
       data: {
         userId: dto.userId,
         merchantId: dto.merchantId,
@@ -31,33 +35,50 @@ export class SubscriptionsService {
         nextChargeAt: dto.nextChargeAt ? new Date(dto.nextChargeAt) : this.defaultNextChargeDate(dto.interval),
       },
     });
+
+    await this.audit.logSubscription(dto.userId, 'subscription.created', subscription.id, {
+      amount: dto.amount,
+      interval: dto.interval,
+      merchantId: dto.merchantId ?? 'none',
+      agentWalletId: dto.agentWalletId ?? 'none',
+    });
+
+    return subscription;
   }
 
-  async updateStatus(id: string, dto: UpdateSubscriptionStatusDto) {
+  async updateStatus(id: string, dto: UpdateSubscriptionStatusDto, userId?: string) {
     await this.requireSubscription(id);
-    return this.prisma.subscription.update({
+    const updated = await this.prisma.subscription.update({
       where: { id },
       data: { status: dto.status },
     });
+    if (userId) {
+      await this.audit.logSubscription(userId, `subscription.${dto.status.toLowerCase()}`, id);
+    }
+    return updated;
   }
 
-  async pause(id: string) {
-    return this.updateStatus(id, { status: TransactionStatus.REJECTED });
+  async pause(id: string, userId?: string) {
+    return this.updateStatus(id, { status: TransactionStatus.REJECTED }, userId);
   }
 
-  async renew(id: string) {
+  async renew(id: string, userId?: string) {
     await this.requireSubscription(id);
-    return this.prisma.subscription.update({
+    const updated = await this.prisma.subscription.update({
       where: { id },
       data: {
         status: TransactionStatus.PENDING,
         nextChargeAt: this.defaultNextChargeDate('monthly'),
       },
     });
+    if (userId) {
+      await this.audit.logSubscription(userId, 'subscription.renewed', id);
+    }
+    return updated;
   }
 
-  async cancel(id: string) {
-    return this.updateStatus(id, { status: TransactionStatus.FAILED });
+  async cancel(id: string, userId?: string) {
+    return this.updateStatus(id, { status: TransactionStatus.FAILED }, userId);
   }
 
   private async requireSubscription(id: string) {

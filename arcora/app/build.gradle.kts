@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -10,6 +11,7 @@ android {
     compileSdk = 35
 
     val apiBaseUrl = (project.findProperty("ARCORA_API_BASE_URL") as String?) ?: "https://arcora-api.onrender.com/"
+    val sentryDsn = (project.findProperty("SENTRY_DSN") as String?) ?: ""
 
     defaultConfig {
         applicationId = "com.arcora"
@@ -20,6 +22,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -102,6 +105,13 @@ dependencies {
     // Real-time notifications (Socket.IO)
     implementation("io.socket:socket.io-client:2.1.0")
 
+    // Push notifications (Firebase)
+    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Crash reporting (Sentry)
+    implementation("io.sentry:sentry-android:7.14.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
@@ -112,6 +122,9 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))

@@ -24,6 +24,15 @@ interface ArcOraApi {
     @POST("auth/otp/login")
     suspend fun requestLoginOtp(@Body request: OtpRequest): OtpResponse
 
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleAuthRequest): AuthSessionResponse
+
+    @POST("auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): SessionResponse
+
+    @POST("auth/profile-image")
+    suspend fun uploadProfileImage(@Body request: ProfileImageRequest): ProfileImageResponse
+
     @GET("auth/me")
     suspend fun me(): UserProfileResponse
 
@@ -107,6 +116,12 @@ interface ArcOraApi {
 
     @POST("subscriptions/{id}/cancel")
     suspend fun cancelSubscription(@Path("id") id: String): SubscriptionResponse
+
+    @POST("notifications/push-token")
+    suspend fun registerPushToken(@Body request: RegisterPushTokenRequest): Unit
+
+    @DELETE("notifications/push-token")
+    suspend fun removePushToken(@Body request: RemovePushTokenRequest): Unit
 }
 
 data class RegisterStartRequest(
@@ -143,6 +158,25 @@ data class OtpRequest(
 
 data class OtpResponse(
     val message: String
+)
+
+data class GoogleAuthRequest(
+    val idToken: String,
+    val displayName: String? = null,
+    val username: String? = null
+)
+
+data class RefreshTokenRequest(
+    val refreshToken: String
+)
+
+data class ProfileImageRequest(
+    val imageBase64: String,
+    val mimeType: String
+)
+
+data class ProfileImageResponse(
+    val profileImageUrl: String?
 )
 
 data class AuthSessionResponse(
@@ -414,4 +448,13 @@ data class LeaderboardEntry(
     val displayName: String,
     val reputationScore: Int,
     val isVerified: Boolean
+)
+
+data class RegisterPushTokenRequest(
+    val token: String,
+    val platform: String
+)
+
+data class RemovePushTokenRequest(
+    val token: String
 )

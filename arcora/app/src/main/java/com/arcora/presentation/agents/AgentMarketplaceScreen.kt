@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.arcora.data.api.AgentListingResponse
+import com.arcora.domain.repository.AgentListing
 import com.arcora.presentation.components.ArcOraCard
 import com.arcora.presentation.components.ArcOraPrimaryButton
 import com.arcora.presentation.components.KeyValueRow
@@ -122,7 +122,7 @@ fun AgentMarketplaceScreen(
 
 @Composable
 private fun AgentCard(
-    agent: AgentListingResponse,
+    agent: AgentListing,
     onSelect: () -> Unit,
     onRequest: () -> Unit
 ) {

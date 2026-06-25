@@ -59,5 +59,6 @@ data class BridgeQuote(
     val destinationChain: String = "Arc Testnet",
     val amount: Money,
     val estimatedTime: String,
-    val routeSummary: String
+    val routeSummary: String,
+    val fee: String? = null
 )

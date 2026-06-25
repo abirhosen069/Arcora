@@ -49,6 +49,10 @@ fun BridgeScreen(
                 KeyValueRow("Estimated time", quote.estimatedTime)
                 Spacer(Modifier.height(10.dp))
                 KeyValueRow("Destination", quote.destinationChain, ArcoraGreen)
+                quote.fee?.let { fee ->
+                    Spacer(Modifier.height(10.dp))
+                    KeyValueRow("Estimated fee", fee)
+                }
                 Spacer(Modifier.height(18.dp))
                 ArcOraPrimaryButton("Bridge to Arc", viewModel::executeBridge, loading = state.isLoading)
             }

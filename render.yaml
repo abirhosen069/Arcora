@@ -36,7 +36,7 @@ services:
       - key: TRANSACTION_EXECUTION_MODE
         value: server_relay
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://arcora.app,https://www.arcora.app"
       - key: GOOGLE_CLIENT_ID
         value: "536085729408-umds32jg06rc31ahlc35phjgeak78u9p.apps.googleusercontent.com"
       - key: PASSKEY_RPID
@@ -58,6 +58,10 @@ services:
       - key: CIRCLE_PROJECT_ID
         sync: false
       - key: CIRCLE_WALLET_SET_ID
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
 
 databases:

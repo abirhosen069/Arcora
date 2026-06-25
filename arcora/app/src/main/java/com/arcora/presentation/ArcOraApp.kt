@@ -1,6 +1,7 @@
 package com.arcora.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -9,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.arcora.DeepLinkData
 import com.arcora.presentation.activity.ActivityScreen
 import com.arcora.presentation.agentwallets.AgentWalletsScreen
 import com.arcora.presentation.assistant.AssistantScreen
@@ -33,11 +35,17 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 
 @Composable
-fun ArcOraApp(sessionViewModel: SessionViewModel = hiltViewModel()) {
+fun ArcOraApp(
+    initialDeepLink: DeepLinkData? = null,
+    sessionViewModel: SessionViewModel = hiltViewModel()
+) {
     val sessionState by sessionViewModel.uiState.collectAsStateWithLifecycle()
     when (val state = sessionState) {
         SessionUiState.Loading -> ArcOraLoadingScreen(message = "Connecting to ArcOra…")
-        is SessionUiState.Ready -> ArcOraNavHost(startAtDashboard = state.hasSession)
+        is SessionUiState.Ready -> ArcOraNavHost(
+            startAtDashboard = state.hasSession,
+            initialDeepLink = initialDeepLink
+        )
     }
 }
 
@@ -45,9 +53,25 @@ private fun String.urlEncode() = URLEncoder.encode(this, "UTF-8")
 private fun String.urlDecode() = URLDecoder.decode(this, "UTF-8")
 
 @Composable
-private fun ArcOraNavHost(startAtDashboard: Boolean) {
+private fun ArcOraNavHost(startAtDashboard: Boolean, initialDeepLink: DeepLinkData? = null) {
     val navController = rememberNavController()
     val startDestination = if (startAtDashboard) ArcOraRoute.Dashboard.route else ArcOraRoute.Onboarding.route
+
+    LaunchedEffect(initialDeepLink) {
+        if (startAtDashboard && initialDeepLink != null) {
+            when (initialDeepLink) {
+                is DeepLinkData.Send -> {
+                    val recipient = initialDeepLink.recipient?.urlEncode() ?: ""
+                    val amount = initialDeepLink.amount?.urlEncode() ?: ""
+                    val note = initialDeepLink.note?.urlEncode() ?: ""
+                    navController.navigate("send/$recipient/$amount/$note")
+                }
+                is DeepLinkData.Checkout -> {
+                    navController.navigate(ArcOraRoute.Send.route)
+                }
+            }
+        }
+    }
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(ArcOraRoute.Onboarding.route) {
@@ -129,7 +153,30 @@ private fun ArcOraNavHost(startAtDashboard: Boolean) {
                 onSettings = { navController.navigate(ArcOraRoute.Settings.route) }
             )
         }
-        composable(ArcOraRoute.Send.route) { SendPaymentScreen(onDone = { navController.popBackStack() }) }
+
+        composable(ArcOraRoute.Send.route) {
+            SendPaymentScreen(onDone = { navController.popBackStack() })
+        }
+
+        composable(
+            route = "send/{recipient}/{amount}/{note}",
+            arguments = listOf(
+                navArgument("recipient") { type = NavType.StringType; defaultValue = "" },
+                navArgument("amount") { type = NavType.StringType; defaultValue = "" },
+                navArgument("note") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val recipient = backStackEntry.arguments?.getString("recipient")?.urlDecode() ?: ""
+            val amount = backStackEntry.arguments?.getString("amount")?.urlDecode() ?: ""
+            val note = backStackEntry.arguments?.getString("note")?.urlDecode() ?: ""
+            SendPaymentScreen(
+                initialRecipient = recipient,
+                initialAmount = amount,
+                initialNote = note,
+                onDone = { navController.popBackStack() }
+            )
+        }
+
         composable(ArcOraRoute.Receive.route) { ReceiveScreen(onDone = { navController.popBackStack() }) }
         composable(ArcOraRoute.Bridge.route) { BridgeScreen(onDone = { navController.popBackStack() }) }
         composable(ArcOraRoute.Activity.route) { ActivityScreen(onBack = { navController.popBackStack() }) }

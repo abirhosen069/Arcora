@@ -82,13 +82,94 @@ APK output: `arcora/app/build/outputs/apk/release/app-release-unsigned.apk`
 | `RELAYER_PRIVATE_KEY` | **Yes** | `0x` + 64 hex chars; fund with testnet USDC |
 | `ARC_RPC_URL` | Set | `https://rpc.testnet.arc.network` |
 | `ARC_USDC_ADDRESS` | Set | `0x3600000000000000000000000000000000000000` |
-| `CORS_ORIGINS` | Set | `*` for mobile-only MVP |
+| `CORS_ORIGINS` | Set | `https://arcora.app,https://www.arcora.app` |
+| `SENTRY_DSN` | Optional | Sentry project DSN for crash reporting |
+| `FIREBASE_SERVICE_ACCOUNT` | Optional | Firebase Admin SDK JSON for push notifications |
 
-Optional later: `CIRCLE_KIT_KEY`, `GOOGLE_ANDROID_CLIENT_ID`, `SENTRY_DSN`.
+## 7. Database Migrations
 
-## 7. CI/CD
+### Creating a new migration
 
-GitHub Actions in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) validates backend build and Android assemble on every push.
+```bash
+cd arcora/backend
+npx prisma migrate dev --name description_of_change
+```
+
+This generates a migration file in `prisma/migrations/` and updates the Prisma client.
+
+### Deploying migrations to production
+
+Migrations run automatically on each deploy via `start:prod`:
+
+```json
+"start:prod": "prisma migrate deploy && node dist/main.js"
+```
+
+### Manual migration (if needed)
+
+```bash
+npx prisma migrate deploy
+```
+
+### Rolling back
+
+Prisma does not support automatic rollbacks. To revert:
+
+1. Create a new migration that undoes the change
+2. Deploy it
+
+## 8. Database Backups
+
+### Render Managed PostgreSQL
+
+Render automatically backs up paid-tier databases daily with 7-day retention.
+
+For manual backups:
+
+```bash
+# Set DATABASE_URL from Render dashboard
+pg_dump $DATABASE_URL > backup_$(date +%Y%m%d_%H%M%S).sql
+```
+
+### Restoring from backup
+
+```bash
+psql $DATABASE_URL < backup_20260625_120000.sql
+```
+
+### Local development backup
+
+```bash
+# Backup
+docker exec arcora-db pg_dump -U arcora arcora > local_backup.sql
+
+# Restore
+docker exec -i arcora-db psql -U arcora arcora < local_backup.sql
+```
+
+## 9. Local Development with Docker
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Run migrations
+cd arcora/backend
+npx prisma migrate deploy
+
+# Check health
+curl http://localhost:8080/health
+
+# Stop
+docker-compose down
+```
+
+## 10. CI/CD
+
+GitHub Actions in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) validates:
+
+- Backend: `npm ci` → `build` → `lint` → `test`
+- Android: `assembleDebug` → `assembleRelease` → `testDebugUnitTest`
 
 ## Architecture
 
@@ -110,9 +191,14 @@ Arc Testnet RPC
 | Payments fail with `execution_not_configured` | Set and fund `RELAYER_PRIVATE_KEY` |
 | Android network errors | Confirm `ARCORA_API_BASE_URL` matches deployed HTTPS URL |
 | Render cold start (~30s) | Upgrade to paid plan or accept free-tier spin-down |
+| Push notifications not working | Set `FIREBASE_SERVICE_ACCOUNT` with Firebase Admin SDK JSON |
+| Crashes not appearing in Sentry | Set `SENTRY_DSN` in both backend and Android config |
 
 ## Security Notes
 
 - **Testnet only** — relayer holds testnet USDC, not production funds
 - Never commit `.env`, keystore files, or private keys
-- Replace `CORS_ORIGINS=*` before public web clients
+- CORS locked to `arcora.app` domains in production
+- Rate limiting enabled globally (30 req/min) and on auth endpoints (3-5 req/min)
+- All payments have idempotency key support to prevent double-spends
+- Audit logging tracks all state-changing operations

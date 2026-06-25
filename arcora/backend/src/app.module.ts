@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ActivityModule } from './activity/activity.module';
 import { AgentsModule } from './agents/agents.module';
 import { AiModule } from './ai/ai.module';
@@ -22,6 +24,15 @@ import { WalletModule } from './wallet/wallet.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 30,
+        },
+      ],
+    }),
+    ScheduleModule.forRoot(),
     CommonModule,
     AuthModule,
     UsersModule,
@@ -42,6 +53,10 @@ import { WalletModule } from './wallet/wallet.module';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

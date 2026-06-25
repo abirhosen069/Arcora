@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,9 +27,18 @@ import com.arcora.presentation.theme.ArcoraMuted
 @Composable
 fun SendPaymentScreen(
     onDone: () -> Unit,
+    initialRecipient: String = "",
+    initialAmount: String = "",
+    initialNote: String = "",
     viewModel: SendPaymentViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(initialRecipient, initialAmount, initialNote) {
+        if (initialRecipient.isNotBlank()) viewModel.onRecipientChange(initialRecipient)
+        if (initialAmount.isNotBlank()) viewModel.onAmountChange(initialAmount)
+        if (initialNote.isNotBlank()) viewModel.onNoteChange(initialNote)
+    }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp)) {
         Spacer(Modifier.height(32.dp))
