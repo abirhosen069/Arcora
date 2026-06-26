@@ -40,7 +40,7 @@ class BridgeToArcUseCaseTest {
         coEvery { compliancePolicy.evaluateCounterparty(any(), any()) } returns ComplianceVerdict(
             allowed = true, riskScore = 10, reason = "OK", requiresKybOrKyc = false
         )
-        every { transactionAuthorizer.authorize(any()) } returns ApprovalResult.Approved
+        coEvery { transactionAuthorizer.authorize(any()) } returns ApprovalResult.Approved
         coEvery { walletRepository.bridgeToArc(any()) } returns mockk()
     }
 
@@ -74,7 +74,7 @@ class BridgeToArcUseCaseTest {
 
     @Test
     fun `execute throws when user rejects`() = runTest {
-        every { transactionAuthorizer.authorize(any()) } returns ApprovalResult.Rejected
+        coEvery { transactionAuthorizer.authorize(any()) } returns ApprovalResult.Rejected
         try {
             useCase.execute("Base Sepolia", Money.usdc("100"))
             fail("Should have thrown")

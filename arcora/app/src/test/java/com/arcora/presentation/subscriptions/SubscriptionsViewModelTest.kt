@@ -3,8 +3,9 @@ package com.arcora.presentation.subscriptions
 import com.arcora.domain.repository.AuthRepository
 import com.arcora.domain.repository.Subscription
 import com.arcora.domain.repository.SubscriptionRepository
-import com.arcora.domain.repository.UserProfile
+import com.arcora.domain.model.UserProfile
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,8 +37,8 @@ class SubscriptionsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         subscriptionRepository = mockk()
         authRepository = mockk()
-        coEvery { authRepository.currentUser } returns MutableStateFlow(
-            UserProfile("u1", "test@test.com", "@test", "Test", "0x123", 50, true)
+        every { authRepository.currentUser } returns MutableStateFlow(
+            UserProfile("u1", "Test", "@test", "test@test.com", "0x123")
         )
         coEvery { subscriptionRepository.list("u1") } returns fakeSubscriptions
         coEvery { subscriptionRepository.create(any(), any(), any(), any(), any()) } returns fakeSubscriptions[0]
@@ -53,6 +54,7 @@ class SubscriptionsViewModelTest {
 
     @Test
     fun `initial state loads subscriptions`() = runTest {
+        viewModel.refresh()
         advanceUntilIdle()
         val state = viewModel.uiState.value
         assertEquals(2, state.subscriptions.size)

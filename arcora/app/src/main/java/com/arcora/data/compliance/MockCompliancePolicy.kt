@@ -2,6 +2,7 @@ package com.arcora.data.compliance
 
 import com.arcora.domain.compliance.CompliancePolicy
 import com.arcora.domain.compliance.ComplianceVerdict
+import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,13 +17,13 @@ class MockCompliancePolicy @Inject constructor() : CompliancePolicy {
         )
 
         return when {
-            amount > 10000 -> ComplianceVerdict(
+            amount > BigDecimal("10000") -> ComplianceVerdict(
                 allowed = true,
                 riskScore = 45,
                 reason = "High-value transaction - standard compliance check passed",
                 requiresKybOrKyc = true
             )
-            amount > 1000 -> ComplianceVerdict(
+            amount > BigDecimal("1000") -> ComplianceVerdict(
                 allowed = true,
                 riskScore = 25,
                 reason = "Medium-value transaction - compliance check passed",

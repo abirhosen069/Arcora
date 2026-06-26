@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../auth/current-user.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PushService } from './push.service';
@@ -28,7 +28,7 @@ export class NotificationsController {
   }
 
   @SkipThrottle()
-  @Delete('push-token')
+  @Post('push-token/remove')
   removeToken(@Body() dto: RemovePushTokenDto) {
     return this.pushService.removeToken(dto.token);
   }

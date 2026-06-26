@@ -118,10 +118,10 @@ interface ArcOraApi {
     suspend fun cancelSubscription(@Path("id") id: String): SubscriptionResponse
 
     @POST("notifications/push-token")
-    suspend fun registerPushToken(@Body request: RegisterPushTokenRequest): Unit
+    suspend fun registerPushToken(@Body request: RegisterPushTokenRequest)
 
-    @DELETE("notifications/push-token")
-    suspend fun removePushToken(@Body request: RemovePushTokenRequest): Unit
+    @POST("notifications/push-token/remove")
+    suspend fun removePushToken(@Body request: RemovePushTokenRequest)
 }
 
 data class RegisterStartRequest(

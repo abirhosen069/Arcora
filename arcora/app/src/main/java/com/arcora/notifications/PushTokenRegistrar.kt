@@ -1,6 +1,8 @@
 package com.arcora.notifications
 
 import com.arcora.data.api.ArcOraApi
+import com.arcora.data.api.RegisterPushTokenRequest
+import com.arcora.data.api.RemovePushTokenRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,29 +20,18 @@ class PushTokenRegistrar @Inject constructor(
     fun registerToken(token: String) {
         if (token == currentToken) return
         currentToken = token
-
+        val request = RegisterPushTokenRequest(token = token, platform = "android")
         scope.launch {
-            runCatching {
-                api.registerPushToken(
-                    com.arcora.data.api.RegisterPushTokenRequest(
-                        token = token,
-                        platform = "android"
-                    )
-                }
-            }
+            runCatching { api.registerPushToken(request) }
         }
     }
 
     fun removeToken() {
         val token = currentToken ?: return
         currentToken = null
-
+        val request = RemovePushTokenRequest(token = token)
         scope.launch {
-            runCatching {
-                api.removePushToken(
-                    com.arcora.data.api.RemovePushTokenRequest(token = token)
-                )
-            }
+            runCatching { api.removePushToken(request) }
         }
     }
 }
